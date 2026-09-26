@@ -276,6 +276,8 @@ namespace ValheimArena.Core
             var p = ProfileStore.FromJson(json);
             if (p != null)
             {
+                // Смена профиля — от ванили: чего нет в новом профиле (слабые места, атаки), не остаётся от прежнего.
+                if (Profile != null) ResetToVanilla();
                 Profile = p;
                 ProfileLogic.ApplyBase(this, p, keepHealthFraction: true);
                 if (ItemsApplied) ProfileLogic.ApplyItems(this, p);
@@ -385,9 +387,13 @@ namespace ValheimArena.Core
             ApplyProfileAsOwner(json);
         }
 
+        /// <summary>Профиль чужого бойца меняет хозяин его арены, а гость — если хозяин разрешил гостям управлять боем.</summary>
         private void RPC_SetProfile(long sender, string json)
         {
-            if (IsOwner) ApplyProfileAsOwner(json);
+            if (!IsOwner) return;
+            var s = Session;
+            if (s == null || (sender != s.HostPeer && !s.Rules.allowGuests)) return;
+            ApplyProfileAsOwner(json);
         }
 
         private void ApplyProfileAsOwner(string json)

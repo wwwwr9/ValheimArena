@@ -44,9 +44,16 @@ namespace ValheimArena.Profiles
                 jumpForce = ch.m_jumpForce,
             };
             if (ch.m_weakSpots != null)
+            {
+                var keys = WeakSpotKeys(ch.m_weakSpots);
+                int i = 0;
                 foreach (var ws in ch.m_weakSpots)
-                    if (ws && p.weakSpots.Find(x => x.name == ws.gameObject.name) == null)
-                        p.weakSpots.Add(new WeakSpotOverride { name = ws.gameObject.name, resists = ResistSet.From(ws.m_damageModifiers) });
+                {
+                    string key = keys[i++];
+                    if (ws && p.weakSpots.Find(x => x.name == key) == null)
+                        p.weakSpots.Add(new WeakSpotOverride { name = key, resists = ResistSet.From(ws.m_damageModifiers) });
+                }
+            }
             if (ai)
             {
                 p.viewRange = ai.m_viewRange;
@@ -82,6 +89,24 @@ namespace ValheimArena.Profiles
                 }
             }
             return p;
+        }
+
+        /// <summary>
+        /// Ключи слабых мест по порядку: имя объекта, а у повторившегося имени — с номером («Имя #2»), чтобы
+        /// одноимённые места с разными сопротивлениями не сливались в одно.
+        /// </summary>
+        public static List<string> WeakSpotKeys(IEnumerable<WeakSpot> spots)
+        {
+            var keys = new List<string>();
+            var seen = new Dictionary<string, int>();
+            foreach (var ws in spots)
+            {
+                string name = ws ? ws.gameObject.name : "";
+                seen.TryGetValue(name, out int n);
+                seen[name] = ++n;
+                keys.Add(n == 1 ? name : name + " #" + n);
+            }
+            return keys;
         }
 
         public static bool IsAttackItem(ItemDrop.ItemData item)
@@ -251,12 +276,18 @@ namespace ValheimArena.Profiles
             if (p.resists != null) ch.m_damageModifiers = p.resists.ToModifiers();
             // Слабые места — компоненты экземпляра: правка касается только этого бойца.
             if (ch.m_weakSpots != null && p.weakSpots != null && p.weakSpots.Count > 0)
+            {
+                var keys = WeakSpotKeys(ch.m_weakSpots);
+                int i = 0;
                 foreach (var ws in ch.m_weakSpots)
                 {
+                    string key = keys[i++];
                     if (!ws) continue;
-                    var o = p.weakSpots.Find(x => x.name == ws.gameObject.name);
+                    // Профили, снятые до номеров у одноимённых мест, правят все места с этим именем.
+                    var o = p.weakSpots.Find(x => x.name == key) ?? p.weakSpots.Find(x => x.name == ws.gameObject.name);
                     if (o != null) ws.m_damageModifiers = o.resists.ToModifiers();
                 }
+            }
             ch.m_staggerDamageFactor = p.staggerDamageFactor;
             ch.m_staggerWhenBlocked = p.staggerWhenBlocked;
             if (p.regenAllHPTime > 0f) ch.m_regenAllHPTime = p.regenAllHPTime;

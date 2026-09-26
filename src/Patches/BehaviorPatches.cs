@@ -223,6 +223,17 @@ namespace ValheimArena.Patches
     }
 
     /// <summary>
+    /// Разрушаемый объект, сломанный ударом бойца, порождает своё (m_spawnWhenDestroyed) внутри атаки бойца, но
+    /// порождённое — не его призыв: у объекта создатель посторонний (пустой).
+    /// </summary>
+    [HarmonyPatch(typeof(Destructible), "RPC_Damage")]
+    internal static class DestructibleSpawnContext
+    {
+        private static void Prefix(out bool __state) => __state = SpawnContext.Push(null);
+        private static Exception Finalizer(Exception __exception, bool __state) { SpawnContext.Pop(__state); return __exception; }
+    }
+
+    /// <summary>
     /// Способность призыва, запускающаяся сама при появлении (m_spawnOnAwake), стартует раньше, чем игра сообщит
     /// ей владельца (Setup), — её m_owner так и остаётся пустым. Запоминаем создателя в момент появления
     /// (Awake идёт внутри атаки/снаряда, т.е. внутри контекста создателя).
