@@ -13,7 +13,11 @@ namespace ValheimArena.UI
     ///
     /// Схема: щелчок, случившийся в кадре N, привязывается к элементу в проходе Repaint кадра N (там известны
     /// прямоугольники и позиция мыши в координатах окна); срабатывает элемент в первом проходе OnGUI кадра N+1
-    /// (обычно Layout) — до раскладки, поэтому изменения состава элементов не ломают GUILayout.
+    /// (Layout). Срабатывает он посреди раскладки: всё, что разложено выше, осталось по старому состоянию, поэтому
+    /// после такого прохода кадр раскладывается заново (<see cref="InputApplied"/>, ArenaUI.OnGUI).
+    ///
+    /// Элемент опознаётся не порядковым номером, а ключом (<see cref="ControlId"/>): если между кадрами в списке
+    /// выше появилась или пропала строка, номера сдвигаются, и щелчок достался бы соседнему элементу.
     /// </summary>
     public static class UiInput
     {
@@ -30,26 +34,37 @@ namespace ValheimArena.UI
         private static Keyboard _hookedKeyboard;
 
         // --- проходы OnGUI
+        private const int NoControl = -1;
+        private const int KindClick = 0, KindScroll = 1, KindDrag = 2;
+        public const int KindText = 3;
+
         private static int _passFrame = -1;
-        private static int _id;
-        private static int _armedId = -1;
-        private static int _candidateId = -1;
+        private static int _scope;
+        private static readonly Stack<int> ScopeStack = new Stack<int>();
+        private static readonly Dictionary<int, int> Seen = new Dictionary<int, int>();
+        private static int _armedId = NoControl;
+        private static int _candidateId = NoControl;
         private static bool _pressResolved;
-        private static int _armedScrollId = -1;
+        private static int _armedScrollId = NoControl;
         private static float _armedScrollDelta;
-        private static int _scrollCandidate = -1;
+        private static int _scrollCandidate = NoControl;
         private static float _scrollDelta;
         private static readonly Stack<int> ScrollStack = new Stack<int>();
 
-        public static int FireId { get; private set; } = -1;
+        private static int FireId { get; set; } = NoControl;
         public static bool FirstPass { get; private set; }
+        /// <summary>
+        /// В первом проходе кадра сработал элемент, применён набор или ползунок: состояние окна поменялось посреди
+        /// раскладки, и кадр нужно разложить заново (<see cref="ArenaUI.OnGUI"/>).
+        /// </summary>
+        public static bool InputApplied { get; private set; }
         public static bool IsRepaint { get; private set; }
 
         // --- текстовый фокус и перетаскивание ползунков
         public static string FocusId { get; private set; }
         private static readonly List<char> FrameTyped = new List<char>();
         private static bool _fBackspace, _fDelete, _fSubmit, _fCancel, _fClear, _fPaste;
-        public static int DragId { get; private set; } = -1;
+        private static int _dragId = NoControl;
         private static float _dragFrac;
         private static bool _dragArmed;
 
@@ -73,7 +88,7 @@ namespace ValheimArena.UI
                 float s = mouse.scroll.ReadValue().y;
                 if (windowsOpen && Mathf.Abs(s) > 0.01f) _wheelPending += -Mathf.Sign(s) * 40f * Mathf.Max(1f, Mathf.Abs(s) / 120f);
             }
-            if (!Held) DragId = -1;
+            if (!Held) _dragId = NoControl;
 
             HookKeyboard();
             var kb = Keyboard.current;
@@ -117,7 +132,9 @@ namespace ValheimArena.UI
         /// <summary>В начале OnGUI мода, на каждом событии.</summary>
         public static void BeginPass(Vector2 guiMouse, Rect menu, bool menuOpen, Rect editor, bool editorOpen)
         {
-            _id = 0;
+            _scope = 0;
+            ScopeStack.Clear();
+            Seen.Clear();
             ScrollStack.Clear();
             IsRepaint = Event.current.type == EventType.Repaint;
             FirstPass = Time.frameCount != _passFrame;
@@ -127,8 +144,9 @@ namespace ValheimArena.UI
 
             if (FirstPass)
             {
+                InputApplied = false;
                 FireId = _armedId;
-                _armedId = -1;
+                _armedId = NoControl;
                 if (_pressResolved)
                 {
                     // Щелчок мимо поля ввода снимает фокус; поле, по которому щёлкнули, вернёт его себе.
@@ -143,12 +161,12 @@ namespace ValheimArena.UI
             }
             else
             {
-                FireId = -1;
+                FireId = NoControl;
             }
             if (IsRepaint)
             {
-                _candidateId = -1;
-                _scrollCandidate = -1;
+                _candidateId = NoControl;
+                _scrollCandidate = NoControl;
                 _scrollDelta = _wheelPending;
             }
         }
@@ -171,11 +189,39 @@ namespace ValheimArena.UI
             }
             else
             {
-                _armedScrollId = -1;
+                _armedScrollId = NoControl;
             }
         }
 
-        public static int NextId() => ++_id;
+        /// <summary>
+        /// Опознание элемента: ключ (подпись кнопки, имя поля) в пределах окна и области <see cref="PushScope"/>
+        /// плюс номер среди элементов с тем же ключом в этом проходе. Сдвиг соседних элементов его не меняет.
+        /// </summary>
+        public static int ControlId(string key, int kind = KindClick)
+        {
+            int h = Mix(Mix(Mix(_scope, CurrentWindow), kind), key == null ? 0 : key.GetHashCode());
+            Seen.TryGetValue(h, out int n);
+            Seen[h] = n + 1;
+            int id = Mix(h, n);
+            return id == NoControl ? 1 : id;
+        }
+
+        private static int Mix(int h, int v) => unchecked((h ^ v) * 16777619 + 1);
+
+        /// <summary>
+        /// Область ключей для строки списка: одинаковые кнопки разных строк («✕», «Изм.») привязаны к своей строке,
+        /// а не к позиции в списке.
+        /// </summary>
+        public static void PushScope(int key)
+        {
+            ScopeStack.Push(_scope);
+            _scope = Mix(_scope, key);
+        }
+
+        public static void PopScope()
+        {
+            if (ScopeStack.Count > 0) _scope = ScopeStack.Pop();
+        }
 
         /// <summary>Мышь над прямоугольником (координаты текущей группы/области) и не скрыта прокруткой или другим окном.</summary>
         public static bool IsHover(Rect r)
@@ -195,25 +241,30 @@ namespace ValheimArena.UI
             return true;
         }
 
-        /// <summary>Кликабельный элемент: регистрирует попадание в Repaint и возвращает true в кадр срабатывания.</summary>
-        public static bool Clickable(Rect r, out bool hover)
+        /// <summary>
+        /// Кликабельный элемент с ключом <paramref name="key"/> (см. <see cref="ControlId"/>): регистрирует попадание
+        /// в Repaint и возвращает true в кадр срабатывания.
+        /// </summary>
+        public static bool Clickable(Rect r, string key, out bool hover, int kind = KindClick)
         {
-            int id = NextId();
+            int id = ControlId(key, kind);
             hover = IsRepaint && GUI.enabled && IsHover(r);
             if (hover && _pressPending) _candidateId = id;
-            return GUI.enabled && FireId == id;
+            if (!GUI.enabled || FireId != id) return false;
+            InputApplied = true;
+            return true;
         }
 
         // ------------------------------------------------------------------ прокрутка
 
         public static Vector2 BeginScroll(Vector2 pos, params GUILayoutOption[] options)
         {
-            int id = NextId();
+            int id = ControlId(null, KindScroll);
             ScrollStack.Push(id);
             if (FirstPass && _armedScrollId == id)
             {
                 pos.y = Mathf.Max(0f, pos.y + _armedScrollDelta);
-                _armedScrollId = -1;
+                _armedScrollId = NoControl;
             }
             return GUILayout.BeginScrollView(pos, options);
         }
@@ -221,34 +272,36 @@ namespace ValheimArena.UI
         public static void EndScroll()
         {
             GUILayout.EndScrollView();
-            int id = ScrollStack.Count > 0 ? ScrollStack.Pop() : -1;
-            if (!IsRepaint || _scrollCandidate >= 0 || Mathf.Abs(_scrollDelta) < 0.01f) return;
+            int id = ScrollStack.Count > 0 ? ScrollStack.Pop() : NoControl;
+            if (!IsRepaint || _scrollCandidate != NoControl || Mathf.Abs(_scrollDelta) < 0.01f) return;
             // Внутренняя прокрутка закрывается раньше внешней — она и забирает колесо.
             if (IsHover(GUILayoutUtility.GetLastRect())) _scrollCandidate = id;
         }
 
         // ------------------------------------------------------------------ ползунок
 
-        /// <summary>Доля 0…1 от перетаскивания; null — ползунок не тянут.</summary>
-        public static float? Drag(Rect r)
+        /// <summary>Доля 0…1 от перетаскивания; null — ползунок не тянут. <paramref name="active"/> — тянут именно этот.</summary>
+        public static float? Drag(Rect r, string key, out bool active)
         {
-            int id = NextId();
+            int id = ControlId(key, KindDrag);
             if (IsRepaint && GUI.enabled)
             {
                 if (_pressPending && IsHover(r))
                 {
-                    DragId = id;
-                    _candidateId = -1;
+                    _dragId = id;
+                    _candidateId = NoControl;
                 }
-                if (DragId == id && Held)
+                if (_dragId == id && Held)
                 {
                     _dragFrac = Mathf.Clamp01((Event.current.mousePosition.x - r.x) / Mathf.Max(1f, r.width));
                     _dragArmed = true;
                 }
             }
-            if (FirstPass && DragId == id && _dragArmed)
+            active = _dragId == id && Held;
+            if (FirstPass && _dragId == id && _dragArmed)
             {
                 _dragArmed = false;
+                InputApplied = true;
                 return _dragFrac;
             }
             return null;
@@ -265,6 +318,7 @@ namespace ValheimArena.UI
         {
             submitted = false;
             if (!FirstPass || FocusId != id) return value;
+            if (FrameTyped.Count > 0 || _fClear || _fPaste || _fBackspace || _fSubmit || _fCancel) InputApplied = true;
             value = value ?? "";
             if (_fClear) value = "";
             if (_fPaste)

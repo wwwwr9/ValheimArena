@@ -208,7 +208,7 @@ namespace ValheimArena.UI
             if (GuiKit.Btn(L.T("Сбросить к ванили"))) { _work = _vanilla.Clone(); _dirtyHint = true; GuiKit.ResetBuffers(); }
             int onArena = CountOnArena();
             GUI.enabled = onArena > 0 && Arena.CanControl;
-            if (GuiKit.Btn(L.F("Применить к бойцам этого вида ({0})", onArena))) ApplyToArena(false);
+            if (GuiKit.Press(L.F("Применить к бойцам этого вида ({0})", onArena), GuiKit.Button, "apply_kind")) ApplyToArena(false);
             if (GuiKit.Btn(L.T("Вернуть им ваниль"))) ApplyToArena(true);
             GUI.enabled = true;
             var t = ArenaCamera.Target;
@@ -220,13 +220,14 @@ namespace ValheimArena.UI
             GUILayout.EndVertical();
 
             _editScroll = GuiKit.BeginScroll(_editScroll);
-            var before = JsonUtility.ToJson(_work);
+            // Признак правок — раз за кадр, а не на каждом событии OnGUI.
+            var before = !_dirtyHint && UiInput.FirstPass ? JsonIO.ToJson(_work) : null;
             if (Section(0, L.T("Живучесть"))) DrawVitality();
             if (Section(1, L.T("Сопротивления"))) DrawResists();
             if (Section(2, L.T("Движение"))) DrawMovement();
             if (Section(3, L.T("Поведение ИИ"))) DrawBehaviour();
             if (Section(4, L.F("Атаки ({0})", _work.attacks.Count))) DrawAttacks();
-            if (!_dirtyHint && UiInput.FirstPass && JsonUtility.ToJson(_work) != before) _dirtyHint = true;
+            if (before != null && JsonIO.ToJson(_work) != before) _dirtyHint = true;
             GuiKit.EndScroll();
         }
 
@@ -392,18 +393,20 @@ namespace ValheimArena.UI
                 var a = _work.attacks[i];
                 var va = _vanilla.FindAttack(a.item, null) ?? a;
                 GUILayout.BeginVertical(GuiKit.Box);
+                UiInput.PushScope((a.item ?? "").GetHashCode());
                 GUILayout.BeginHorizontal();
                 a.enabled = GuiKit.ToggleBox(a.enabled, 18f);
                 bool open = OpenAttacks.Contains(a.item);
                 string title = (open ? "▼ " : "► ") + (string.IsNullOrEmpty(a.displayName) ? a.item : a.displayName) +
                                GuiKit.Colored(L.F("   {0} · {1} · урон {2:0}", a.item, SourceLabel(a.source), a.damage.Total()) + AttackBadges(a), GuiKit.MutedColor) +
                                (a.enabled ? "" : GuiKit.Colored(L.T("  ОТКЛЮЧЕНА"), new Color(1f, 0.4f, 0.3f)));
-                if (GuiKit.Press(title, GuiKit.Label))
+                if (GuiKit.Press(title, GuiKit.Label, "title"))
                 {
                     if (open) OpenAttacks.Remove(a.item); else OpenAttacks.Add(a.item);
                 }
                 GUILayout.EndHorizontal();
                 if (open) DrawAttack(a, va, "a" + i + "_");
+                UiInput.PopScope();
                 GUILayout.EndVertical();
             }
         }
@@ -540,7 +543,8 @@ namespace ValheimArena.UI
             {
                 float val = d.Get(i);
                 float van = v.Get(i);
-                if (!_showZeroDamage && Mathf.Approximately(val, 0f) && Mathf.Approximately(van, 0f)) continue;
+                // Поле, в котором сейчас набирают, не прячется, даже если там пока 0 (иначе «0.5» не набрать).
+                if (!_showZeroDamage && Mathf.Approximately(val, 0f) && Mathf.Approximately(van, 0f) && UiInput.FocusId != p + i) continue;
                 bool changed = Mathf.Abs(val - van) > 0.0001f;
                 GUILayout.Label(changed ? GuiKit.Colored(DamageSet.Labels[i], GuiKit.Accent) : DamageSet.Labels[i], GuiKit.Small, GUILayout.Width(118));
                 d.Set(i, Mathf.Max(0f, GuiKit.NumberBox(val, p + i, "0.##", 62f)));

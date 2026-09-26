@@ -164,7 +164,9 @@ namespace ValheimArena.Patches
             if (victim != null && attacker != null && victim != attacker && victim.SessionId == attacker.SessionId
                 && !(victim.Rules?.friendlyFire ?? true))
             {
-                if (!Hostility.UnitsHostile(attacker, victim) && !Hostility.UnitsHostile(victim, attacker))
+                // Лечение и усиление союзника игра доставляет тем же ударом — без урона, с эффектом; его пропускаем.
+                bool support = hit.GetTotalDamage() <= 0.1f && hit.m_statusEffectHash != 0;
+                if (!support && !Hostility.UnitsHostile(attacker, victim) && !Hostility.UnitsHostile(victim, attacker))
                     return false;
             }
             // Modify, а не HitData.ApplyModifier: тот не трогает общий урон и урон «только по не-игрокам».
@@ -275,7 +277,8 @@ namespace ValheimArena.Patches
 
     /// <summary>
     /// Облик по звёздам: игра задаёт его только для 1★ и 2★ и при уровне выше заданных возвращает обычный облик —
-    /// 5★ выглядел бы как 0★. Выше заданного — облик последней звезды.
+    /// 5★ выглядел бы как 0★. Выше заданного — облик последней звезды. Только у бойцов арены: облик диких существ
+    /// с большими звёздами (их дают другие моды) остаётся за игрой и этими модами.
     /// </summary>
     [HarmonyPatch(typeof(LevelEffects), nameof(LevelEffects.SetupLevelVisualization))]
     internal static class LevelLookPatch
@@ -283,7 +286,9 @@ namespace ValheimArena.Patches
         private static void Prefix(LevelEffects __instance, ref int level)
         {
             int max = __instance.m_levelSetups != null ? __instance.m_levelSetups.Count + 1 : 1;
-            if (level > max && max > 1) level = max;
+            if (level <= max || max <= 1) return;
+            if (ArenaUnit.Get(__instance.GetComponentInParent<Character>()) == null) return;
+            level = max;
         }
     }
 
@@ -329,7 +334,10 @@ namespace ValheimArena.Patches
         private static void Prefix(Character __instance, out bool __state)
         {
             __state = false;
-            if (ArenaUnit.Get(__instance) == null) return;
+            // Смерть с анимацией: событие анимации вызывает OnDeath у каждого клиента, где она играет (игра сама
+            // выходит у не-владельца). Гибель сообщает только владелец — у него есть последний удар и убийца.
+            var u = ArenaUnit.Get(__instance);
+            if (u == null || !u.IsOwner) return;
             var last = Reflect.LastHit(__instance);
             Arena.OnDeath(__instance, DotAttribution.Resolve(__instance, last?.GetAttacker()));
             // Существа, которых порождает смерть (m_deathEffects: деление слизней и т.п.), — на сторону погибшего.
@@ -382,7 +390,8 @@ namespace ValheimArena.Patches
                     && !(__instance.m_dodgeable && target.IsDodgeInvincible()))
                     __result = true;
             }
-            else if (!s.friendlyFire)
+            // Без дружественного огня союзника не задевает удар по врагам; площадь «для своих» (лечение, щит) — задевает.
+            else if (!s.friendlyFire && __instance.m_hitEnemy)
             {
                 __result = false;
             }

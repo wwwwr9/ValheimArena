@@ -138,25 +138,73 @@ namespace ValheimArena.Core
                 Hostility.ResetFactionMatrix(this);
             }
             if (roster == null) roster = new List<SpawnGroup>();
-            radius = Mathf.Clamp(radius, 5f, 300f);
+            roster.RemoveAll(g => g == null || string.IsNullOrEmpty(g.prefab));
+            radius = Clamp(radius, 5f, 300f, 30f);
+            shape = Mathf.Clamp(shape, 0, 1);
+            boundaryMode = Mathf.Clamp(boundaryMode, 0, 2);
+            heightLimit = Clamp(heightLimit, 0f, 60f, 0f);
+            flyHeight = Clamp(flyHeight, 0f, 40f, 0f);
+            hostilityMode = Mathf.Clamp(hostilityMode, 0, 2);
             playerTeam = Mathf.Clamp(playerTeam, 0, Hostility.TeamCount);
             behavior = Mathf.Clamp(behavior, 0, 2);
             intruders = Mathf.Clamp(intruders, 0, 2);
+            countdown = Clamp(countdown, 0f, 10f, 3f);
+            playerCollision = Mathf.Clamp(playerCollision, 0, 2);
+            freeCamSpeed = Clamp(freeCamSpeed, 1f, 100f, 12f);
+            followStyle = Mathf.Clamp(followStyle, 0, 2);
+            followDistanceScale = Clamp(followDistanceScale, 0.3f, 4f, 1f);
+            directorInterval = Clamp(directorInterval, 3f, 30f, 8f);
+            cameraFov = Clamp(cameraFov, 30f, 110f, 65f);
+            tagDistance = Clamp(tagDistance, 20f, 250f, 90f);
             foreach (var g in roster)
             {
                 g.count = Mathf.Clamp(g.count, 1, 200);
                 g.starsMin = Mathf.Clamp(g.starsMin, 0, 20);
                 g.starsMax = Mathf.Clamp(g.starsMax, g.starsMin, 20);
                 g.team = Mathf.Clamp(g.team, 1, Hostility.TeamCount);
+                g.factionOverride = Mathf.Clamp(g.factionOverride, -1, Hostility.FactionCount - 1);
+                g.placement = Mathf.Clamp(g.placement, 0, 3);
+                g.spread = Clamp(g.spread, 0f, 20f, 4f);
                 g.behavior = Mathf.Clamp(g.behavior, -1, 2);
                 if (g.profile == null) g.profile = "";
             }
         }
 
+        /// <summary>Clamp, который не пропускает NaN и бесконечность (Mathf.Clamp возвращает NaN как есть).</summary>
+        private static float Clamp(float v, float min, float max, float fallback) =>
+            float.IsNaN(v) || float.IsInfinity(v) ? fallback : Mathf.Clamp(v, min, max);
+
+        /// <summary>
+        /// Личное — персонаж, камера, оверлей, уборка сирот: сценарий их не меняет, иначе загрузка чужого сценария
+        /// у арены с боссом молча сняла бы, например, неуязвимость.
+        /// </summary>
+        public void CopyPersonalFrom(ArenaSettings s)
+        {
+            boundaryAffectsPlayer = s.boundaryAffectsPlayer;
+            playerTeam = s.playerTeam;
+            cleanupOrphans = s.cleanupOrphans;
+            playerVisible = s.playerVisible;
+            playerCollision = s.playerCollision;
+            creaturesReact = s.creaturesReact;
+            playerInvulnerable = s.playerInvulnerable;
+            freeCamSpeed = s.freeCamSpeed;
+            followStyle = s.followStyle;
+            followDistanceScale = s.followDistanceScale;
+            director = s.director;
+            directorInterval = s.directorInterval;
+            autoSwitchOnDeath = s.autoSwitchOnDeath;
+            limitCamera = s.limitCamera;
+            cameraFov = s.cameraFov;
+            overlay = s.overlay;
+            nameTags = s.nameTags;
+            hpBars = s.hpBars;
+            killFeed = s.killFeed;
+            tagDistance = s.tagDistance;
+        }
+
         public ArenaSettings Clone()
         {
-            var json = JsonUtility.ToJson(this);
-            var copy = JsonUtility.FromJson<ArenaSettings>(json);
+            var copy = JsonIO.FromJson<ArenaSettings>(JsonIO.ToJson(this));
             copy.EnsureValid();
             return copy;
         }
@@ -175,12 +223,14 @@ namespace ValheimArena.Core
             {
                 if (File.Exists(SettingsPath))
                 {
-                    Current = JsonUtility.FromJson<ArenaSettings>(File.ReadAllText(SettingsPath)) ?? new ArenaSettings();
+                    Current = JsonIO.FromJson<ArenaSettings>(File.ReadAllText(SettingsPath)) ?? new ArenaSettings();
                 }
             }
             catch (Exception e)
             {
-                ArenaPlugin.Log.LogWarning(L.T("settings.json не прочитан, взяты умолчания: ") + e.Message);
+                // Испорченный файл не затирается умолчаниями при выходе — остаётся рядом копией.
+                try { File.Copy(SettingsPath, SettingsPath + ".bad", true); } catch { }
+                ArenaPlugin.Log.LogWarning(L.T("settings.json не прочитан, взяты умолчания (копия — settings.json.bad): ") + e.Message);
                 Current = new ArenaSettings();
             }
             Current.EnsureValid();
@@ -190,12 +240,21 @@ namespace ValheimArena.Core
         {
             try
             {
-                File.WriteAllText(SettingsPath, JsonUtility.ToJson(Current, true));
+                WriteAtomic(SettingsPath, JsonIO.ToJson(Current, true));
             }
             catch (Exception e)
             {
                 ArenaPlugin.Log.LogWarning(L.T("settings.json не сохранён: ") + e.Message);
             }
+        }
+
+        /// <summary>Запись через временный файл: падение посреди записи не оставляет обрезанный JSON.</summary>
+        public static void WriteAtomic(string path, string text)
+        {
+            string tmp = path + ".tmp";
+            File.WriteAllText(tmp, text);
+            if (File.Exists(path)) File.Replace(tmp, path, null);
+            else File.Move(tmp, path);
         }
 
         public static List<string> ListScenarios()
@@ -213,7 +272,7 @@ namespace ValheimArena.Core
             name = FileNames.Sanitize(name);
             if (name.Length == 0) return;
             Directory.CreateDirectory(ScenarioDir);
-            File.WriteAllText(Path.Combine(ScenarioDir, name + ".json"), JsonUtility.ToJson(Current, true));
+            WriteAtomic(Path.Combine(ScenarioDir, name + ".json"), JsonIO.ToJson(Current, true));
         }
 
         public static bool LoadScenario(string name)
@@ -222,8 +281,9 @@ namespace ValheimArena.Core
             if (!File.Exists(path)) return false;
             try
             {
-                var s = JsonUtility.FromJson<ArenaSettings>(File.ReadAllText(path));
+                var s = JsonIO.FromJson<ArenaSettings>(File.ReadAllText(path));
                 if (s == null) return false;
+                s.CopyPersonalFrom(Current);
                 s.EnsureValid();
                 Current = s;
                 return true;

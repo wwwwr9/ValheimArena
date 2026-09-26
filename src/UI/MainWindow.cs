@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using ValheimArena.Core;
 using ValheimArena.Profiles;
@@ -127,7 +128,8 @@ namespace ValheimArena.UI
                     default: fightLabel = L.T("▶ Начать бой"); break;
                 }
                 GUI.enabled = Arena.CanControl;
-                if (GuiKit.BtnOn(fightLabel, cur.State == ArenaState.Fighting, GUILayout.Height(28))) Arena.ToggleFight();
+                if (GuiKit.Press(fightLabel, cur.State == ArenaState.Fighting ? GuiKit.ButtonOn : GuiKit.Button, "fight", GUILayout.Height(28)))
+                    Arena.ToggleFight();
                 if (GuiKit.Btn(L.T("Выпустить состав"), GUILayout.Height(28))) Arena.SpawnRoster();
                 if (GuiKit.Btn(L.T("Очистить арену"), GUILayout.Height(28))) Arena.ClearUnits();
                 GUI.enabled = true;
@@ -254,7 +256,7 @@ namespace ValheimArena.UI
                 GUILayout.Label(L.T("Пока в мире есть другие игроки, игра не даёт менять ход времени."), GuiKit.Muted);
 
             GUILayout.Space(6);
-            GUILayout.Label(L.T("Сценарии (состав + все настройки)"), GuiKit.SubHeader);
+            GUILayout.Label(L.T("Сценарии: состав и правила арены (персонаж, камера и оверлей не меняются)"), GuiKit.SubHeader);
             GUILayout.BeginHorizontal();
             _scenarioName = GuiKit.TextField("", _scenarioName, "scenario_name");
             if (GuiKit.Btn(L.T("Сохранить"), GUILayout.Width(100)) && !string.IsNullOrWhiteSpace(_scenarioName))
@@ -266,15 +268,18 @@ namespace ValheimArena.UI
             foreach (var name in ArenaSettingsStore.ListScenarios())
             {
                 GUILayout.BeginHorizontal(GuiKit.Row);
+                UiInput.PushScope(name.GetHashCode());
                 GUILayout.Label(name, GuiKit.Label);
                 GUILayout.FlexibleSpace();
                 if (GuiKit.Btn(L.T("Загрузить"), GUILayout.Width(90)) && ArenaSettingsStore.LoadScenario(name))
                 {
+                    _editingIndex = -1;
                     GuiKit.ResetBuffers();
                     ArenaBoundary.Rebuild();
                     Arena.Message(L.T("Сценарий загружен: ") + name + (Arena.CanEditRules ? "" : L.T(" (правила действуют на вашей арене, на чужой — правила хозяина)")));
                 }
                 if (GuiKit.Btn(L.T("Удалить"), GUILayout.Width(80))) ArenaSettingsStore.DeleteScenario(name);
+                UiInput.PopScope();
                 GUILayout.EndHorizontal();
             }
         }
@@ -414,13 +419,31 @@ namespace ValheimArena.UI
                 if (g.behavior >= 0) fac += GuiKit.Colored("  " + BehaviorNames[Mathf.Clamp(g.behavior, 0, 2)].ToLowerInvariant(), GuiKit.MutedColor);
                 GUILayout.Label($"{CreatureCatalog.DisplayName(g.prefab)} ×{g.count}  {stars}{prof}{fac}", GuiKit.Label);
                 GUILayout.FlexibleSpace();
+                UiInput.PushScope(RuntimeHelpers.GetHashCode(g));
                 GUI.enabled = canSpawn;
                 if (GuiKit.Btn(L.T("Выпустить"), GUILayout.Width(84))) Arena.SpawnGroup(i);
                 GUI.enabled = true;
                 if (GuiKit.Btn(L.T("Изм."), GUILayout.Width(44))) { _draft = g.Clone(); _editingIndex = i; }
-                if (GuiKit.Btn("▲", GUILayout.Width(24)) && i > 0) { S.roster[i] = S.roster[i - 1]; S.roster[i - 1] = g; }
-                if (GuiKit.Btn("▼", GUILayout.Width(24)) && i < S.roster.Count - 1) { S.roster[i] = S.roster[i + 1]; S.roster[i + 1] = g; }
-                if (GuiKit.Btn("✕", GUILayout.Width(24))) { S.roster.RemoveAt(i); if (_editingIndex == i) _editingIndex = -1; GUILayout.EndHorizontal(); break; }
+                // Изменяемая группа помнится номером — перестановка и удаление сдвигают его вместе с ней.
+                if (GuiKit.Btn("▲", GUILayout.Width(24)) && i > 0)
+                {
+                    S.roster[i] = S.roster[i - 1]; S.roster[i - 1] = g;
+                    if (_editingIndex == i) _editingIndex = i - 1; else if (_editingIndex == i - 1) _editingIndex = i;
+                }
+                if (GuiKit.Btn("▼", GUILayout.Width(24)) && i < S.roster.Count - 1)
+                {
+                    S.roster[i] = S.roster[i + 1]; S.roster[i + 1] = g;
+                    if (_editingIndex == i) _editingIndex = i + 1; else if (_editingIndex == i + 1) _editingIndex = i;
+                }
+                bool remove = GuiKit.Btn("✕", GUILayout.Width(24));
+                UiInput.PopScope();
+                if (remove)
+                {
+                    S.roster.RemoveAt(i);
+                    if (_editingIndex == i) _editingIndex = -1; else if (_editingIndex > i) _editingIndex--;
+                    GUILayout.EndHorizontal();
+                    break;
+                }
                 GUILayout.EndHorizontal();
             }
             GuiKit.EndScroll();
@@ -513,7 +536,7 @@ namespace ValheimArena.UI
         {
             GUILayout.Label(L.T("Кто с кем сражается"), GuiKit.Header);
             bool edit = Arena.CanEditRules;
-            if (!edit) GUILayout.Label(GuiKit.Colored(L.T("Правила арены игрока ") + Arena.Current.HostName + L.T(" — только просмотр."), new Color(0.6f, 0.85f, 1f)), GuiKit.Label);
+            if (!edit) GUILayout.Label(GuiKit.Colored(L.F("Правила арены игрока {0} — только просмотр.", Arena.Current.HostName), new Color(0.6f, 0.85f, 1f)), GuiKit.Label);
             GUI.enabled = edit;
             int mode = GuiKit.Choice(L.T("Режим"), R.hostilityMode, new[] { L.T("Команды"), L.T("Фракции"), L.T("Все против всех") }, 90f);
             if (edit) S.hostilityMode = mode;
@@ -636,7 +659,7 @@ namespace ValheimArena.UI
             for (int m = 0; m < 3; m++)
                 if (GuiKit.BtnOn(ArenaCamera.ModeName((CameraMode)m), (int)ArenaCamera.Mode == m)) ArenaCamera.SetMode((CameraMode)m);
             GUILayout.EndHorizontal();
-            GUILayout.Label(L.T("Свободная: WASD/стрелки — движение, Пробел/E — вверх, Ctrl/Q — вниз, Shift — быстрее, Alt — медленнее, колесо — скорость. ") +
+            GUILayout.Label(L.T("Свободная: WASD — движение, Пробел/E — вверх, Ctrl/Q — вниз, Shift — быстрее, Alt — медленнее, колесо — скорость. ") +
                             L.T("Слежение: мышь — облёт, колесо — дистанция. При открытом меню обзор — с зажатой ПКМ."), GuiKit.Muted);
 
             S.freeCamSpeed = GuiKit.Slider(L.T("Скорость свободной"), S.freeCamSpeed, 1f, 100f, "camspeed", "0.#", suffix: L.T("м/с"));
@@ -714,7 +737,8 @@ namespace ValheimArena.UI
             GUILayout.Space(4);
             S.playerVisible = GuiKit.Toggle(L.T("Видимое отображение"), S.playerVisible);
             GUILayout.BeginHorizontal();
-            GUILayout.Label(L.T("Столкновения"), GuiKit.Label, GUILayout.Width(170));
+            // Отдельный ключ: «Столкновения» — это ещё и вкладка вражды («Hostility»), а здесь — физика тела.
+            GUILayout.Label(L.T("Столкновения тела"), GuiKit.Label, GUILayout.Width(170));
             for (int m = 0; m < 3; m++)
                 if (GuiKit.BtnOn(PlayerPresence.CollisionName((CollisionMode)m), S.playerCollision == m)) S.playerCollision = m;
             GUILayout.EndHorizontal();

@@ -6,7 +6,8 @@ namespace ValheimArena.Core
 {
     /// <summary>
     /// Боец арены. Вешается на существо при появлении; всё, что нужно после перезагрузки мира или на другом
-    /// клиенте, лежит в ZDO (ключи va_*), поэтому компонент восстанавливается из Character.Awake у любого игрока с модом.
+    /// клиенте, лежит в ZDO (ключи va_*), поэтому компонент восстанавливается из Character.Awake у любого игрока с модом,
+    /// а метка, поставленная уже после появления существа, подхватывается ежесекундной сверкой (<see cref="SyncWithZdo"/>).
     /// Правила берутся из сессии его арены (<see cref="Session"/>), а не из локальных настроек клиента.
     /// </summary>
     public class ArenaUnit : MonoBehaviour
@@ -25,6 +26,8 @@ namespace ValheimArena.Core
         public const string ZAdopted = "va_adopted";
         /// <summary>Максимум HP бойца по профилю и уровню (см. ProfileLogic.RecalculateHealth).</summary>
         public const string ZMaxHealth = "va_maxhp";
+        /// <summary>Флаги мира вовлечённого существа до арены: 1 — охотится на игроков, 2 — исчезает днём, 4 — из набега.</summary>
+        public const string ZWorldFlags = "va_wflags";
 
         /// <summary>Как боец попал на арену.</summary>
         public const int Spawned = 0, Summoned = 1, Intruder = 2;
@@ -146,7 +149,29 @@ namespace ValheimArena.Core
             return u;
         }
 
-        /// <summary>Из Character.Awake: если в ZDO есть метка арены — восстановить бойца.</summary>
+        /// <summary>
+        /// Раз в секунду из Arena: сверить компоненты бойцов с метками в ZDO. Метку ставит владелец существа
+        /// (вовлечь чужака, принять призыв), а из Character.Awake компонент получают только те, кто уже пришёл
+        /// с меткой. Без сверки боец, вовлечённый другим игроком, оставался у остальных «диким» — без таблички,
+        /// команды и правил арены, и хозяин не учитывал его в итоге. Снятая владельцем метка (отпущенный чужак)
+        /// так же снимает компонент у всех.
+        /// </summary>
+        public static void SyncWithZdo()
+        {
+            foreach (var c in Character.GetAllCharacters())
+            {
+                if (!c || c.IsPlayer() || ByCharacter.ContainsKey(c)) continue;
+                TryAttachFromZdo(c);
+            }
+            for (int i = All.Count - 1; i >= 0; i--)
+            {
+                var u = All[i];
+                if (!u || u.IsOwner || !u.NView || !u.NView.IsValid()) continue;
+                if (!u.NView.GetZDO().GetBool(ZUnit)) u.Release();
+            }
+        }
+
+        /// <summary>Из Character.Awake и сверки: если в ZDO есть метка арены — восстановить бойца.</summary>
         public static void TryAttachFromZdo(Character c)
         {
             if (!c || c.IsPlayer()) return;
@@ -391,8 +416,20 @@ namespace ValheimArena.Core
         }
 
         /// <summary>
-        /// Отпустить вовлечённого постороннего (арена исчезла): снять метку арены, вернуть фракцию и ключ победы.
-        /// Изменённые поля ИИ вернутся к прототипу при следующей загрузке существа.
+        /// Флаги мира, которые арена у бойца снимает (охота на игроков, исчезновение днём, набег) — запомнить
+        /// до вовлечения, чтобы отпущенный чужак снова стал ночным волком или участником набега, а не остался навсегда.
+        /// </summary>
+        public static void RememberWorldFlags(Character c, ZDO zdo)
+        {
+            var ai = c.GetComponent<BaseAI>();
+            var m = ai as MonsterAI;
+            int flags = (ai && ai.HuntPlayer() ? 1 : 0) | (m && m.DespawnInDay() ? 2 : 0) | (m && m.IsEventCreature() ? 4 : 0);
+            zdo.Set(ZWorldFlags, flags);
+        }
+
+        /// <summary>
+        /// Отпустить вовлечённого постороннего (арена исчезла): снять метку арены (это делает владелец, остальные
+        /// клиенты снимают компонент по метке), вернуть фракцию, ключ победы, флаги мира, поведение и добычу.
         /// </summary>
         public void Release()
         {
@@ -401,16 +438,39 @@ namespace ValheimArena.Core
                 var zdo = NView.GetZDO();
                 zdo.Set(ZUnit, false);
                 zdo.Set(ZSession, "");
+                zdo.Set(ZProfile, "");
                 if (AI) AI.ResetPatrolPoint();
+                int flags = zdo.GetInt(ZWorldFlags, -1);
+                if (flags >= 0)
+                {
+                    if (AI) AI.SetHuntPlayer((flags & 1) != 0);
+                    if (Monster)
+                    {
+                        Monster.SetDespawnInDay((flags & 2) != 0);
+                        Monster.SetEventCreature((flags & 4) != 0);
+                    }
+                }
             }
+            // Профиль, применённый к чужаку из редактора, не уходит с ним в мир.
+            if (Profile != null && Character) ResetToVanilla();
             if (Character)
             {
                 Character.m_faction = OriginalFaction;
                 Character.m_defeatSetGlobalKey = _originalDefeatKey;
                 Character.m_dreamCinematic = _originalDreamCinematic;
+                if (Character.m_deathEffects != null && _originalDeathEffects != null)
+                    Character.m_deathEffects.m_effectPrefabs = _originalDeathEffects;
             }
             if (AI) AI.m_viewRange = BaseViewRange;
-            if (Monster) Monster.m_maxChaseDistance = _originalMaxChase;
+            if (Monster)
+            {
+                Monster.m_maxChaseDistance = _originalMaxChase;
+                Monster.m_fleeIfHurtWhenTargetCantBeReached = _originalFleeIfHurt;
+                Monster.m_fleeIfNotAlerted = _originalFleeIfNotAlerted;
+                Monster.m_fleeIfLowHealth = _originalFleeIfLowHealth;
+                Monster.m_attackPlayerObjects = _originalAttackPlayerObjects;
+                Monster.m_fallAsleepDistance = _originalFallAsleepDistance;
+            }
             var drop = GetComponent<CharacterDrop>();
             if (drop) drop.SetDropsEnabled(true);
             Destroy(this);

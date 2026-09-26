@@ -130,7 +130,8 @@ namespace ValheimArena.Core
             if (listener) listener.transform.localPosition = Vector3.zero;
 
             bool typing = ArenaUI.WantsKeyboard || Console.IsVisible() || (Chat.instance && Chat.instance.HasFocus());
-            bool look = !ArenaUI.WantsMouse || ZInput.GetMouseButton(1);
+            // При открытом окне мода обзор — только с зажатой ПКМ: иначе камера крутится, пока ведёшь мышь к кнопке.
+            bool look = !ArenaUI.WantsCursor || ZInput.GetMouseButton(1);
             Vector2 md = look && !Menu.IsVisible() ? ZInput.GetMouseDelta() * ArenaPlugin.MouseSensitivity.Value : Vector2.zero;
             float invertY = PlayerController.m_invertCameraY ? -1f : 1f;
             float scroll = ArenaUI.WantsMouse ? 0f : ZInput.GetMouseScrollWheel();

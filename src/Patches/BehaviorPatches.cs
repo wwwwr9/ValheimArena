@@ -21,6 +21,8 @@ namespace ValheimArena.Patches
             if (u == null || u.Behavior != ArenaBehavior.Hunt) return false;
             var s = u.Session;
             if (s == null || !s.Live || s.State != ArenaState.Fighting) return false;
+            // Игрок в режиме призрака или отладочного полёта игрой не замечается — и «всезнание» его не выдаёт.
+            if (target is Player p && (p.InGhostMode() || p.InDebugFlyMode())) return false;
             return !target.IsDead() && s.IsInside(target.transform.position, 5f);
         }
     }

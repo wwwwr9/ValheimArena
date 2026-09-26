@@ -1,3 +1,5 @@
+using System;
+using System.Reflection;
 using UnityEngine;
 using ValheimArena.Core;
 
@@ -51,7 +53,10 @@ namespace ValheimArena.UI
                 return;
             }
             UpdateWindowDrag();
-            if (Console.IsVisible() || (Chat.instance && Chat.instance.HasFocus()) || TextInput.IsVisible())
+            // Те же проверки набора текста, что у самой игры (PlayerController): консоль, чат, окно ввода,
+            // подпись метки на карте, поиск в меню строительства.
+            if (Console.IsVisible() || (Chat.instance && Chat.instance.HasFocus()) || TextInput.IsVisible() || Minimap.InTextInput()
+                || (Hud.instance && Hud.instance.m_buildUi && Hud.instance.m_buildUi.SearchFieldFocused))
                 return;
 
             if (Pressed(ArenaPlugin.KeyMenu))
@@ -66,10 +71,14 @@ namespace ValheimArena.UI
             }
             if (Pressed(ArenaPlugin.KeyCamera)) ArenaCamera.CycleMode();
             if (Pressed(ArenaPlugin.KeyFight)) Arena.ToggleFight();
-            if (Pressed(ArenaPlugin.KeyNextTarget)) ArenaCamera.Next(+1);
-            if (Pressed(ArenaPlugin.KeyPrevTarget)) ArenaCamera.Next(-1);
-            if (Pressed(ArenaPlugin.KeySlower)) Arena.StepTimeScale(-1);
-            if (Pressed(ArenaPlugin.KeyFaster)) Arena.StepTimeScale(+1);
+            // Клавиши-символы целей и времени — только у развёрнутой арены: в обычной игре «[» и «-» ничего не трогают.
+            if (Arena.Active)
+            {
+                if (Pressed(ArenaPlugin.KeyNextTarget)) ArenaCamera.Next(+1);
+                if (Pressed(ArenaPlugin.KeyPrevTarget)) ArenaCamera.Next(-1);
+                if (Pressed(ArenaPlugin.KeySlower)) Arena.StepTimeScale(-1);
+                if (Pressed(ArenaPlugin.KeyFaster)) Arena.StepTimeScale(+1);
+            }
             if (Pressed(ArenaPlugin.KeyOverlay))
                 ArenaSettingsStore.Current.overlay = !ArenaSettingsStore.Current.overlay;
             if (Pressed(ArenaPlugin.KeyTags)) ToggleNameTags();
@@ -147,16 +156,69 @@ namespace ValheimArena.UI
             MenuRect = ClampToScreen(MenuRect, scale);
             EditorRect = ClampToScreen(EditorRect, scale);
             UiInput.BeginPass(mouse, MenuRect, MenuOpen, EditorRect, EditorOpen);
+            DrawAll(scale, mouse);
 
+            // Щелчок, набор или ползунок исполнились посреди прохода Layout: разложенное выше них осталось по старому
+            // состоянию, а Repaint нарисует новое — IMGUI бросил бы «Getting control N's position» / «Mismatched
+            // LayoutGroup». Сбрасываем раскладку этого кадра и раскладываем окна заново, уже без срабатываний.
+            if (UiInput.InputApplied && Event.current.type == EventType.Layout && ResetLayout())
+            {
+                GUI.enabled = true;
+                GUI.color = Color.white;
+                GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(scale, scale, 1f));
+                UiInput.BeginPass(mouse, MenuRect, MenuOpen, EditorRect, EditorOpen);
+                DrawAll(scale, mouse);
+            }
+
+            UiInput.EndPass();
+            GUI.matrix = oldMatrix;
+        }
+
+        private static void DrawAll(float scale, Vector2 mouse)
+        {
             Overlay.Draw(scale);
 
             // Порядок рисования = порядок наложения: редактор поверх меню.
             if (MenuOpen) GuiKit.DrawWindow(1, MenuRect, L.T("АРЕНА  ·  ") + ArenaPlugin.Version, MainWindow.Draw);
             if (EditorOpen) GuiKit.DrawWindow(2, EditorRect, L.T("РЕДАКТОР СУЩЕСТВ"), EditorWindow.Draw);
             _mouseOverWindow = (MenuOpen && MenuRect.Contains(mouse)) || (EditorOpen && EditorRect.Contains(mouse));
+        }
 
-            UiInput.EndPass();
-            GUI.matrix = oldMatrix;
+        private static readonly FieldInfo OriginalGuiId =
+            typeof(GUIUtility).GetField("s_OriginalID", BindingFlags.Static | BindingFlags.NonPublic);
+        private static readonly MethodInfo LayoutBegin =
+            typeof(GUILayoutUtility).GetMethod("Begin", BindingFlags.Static | BindingFlags.NonPublic, null, new[] { typeof(int) }, null);
+        private static bool _layoutResetWarned;
+
+        /// <summary>
+        /// Начать раскладку текущего OnGUI заново: GUILayoutUtility.Begin(id) в проходе Layout заводит пустое дерево
+        /// (так его начинает сам Unity в GUIUtility.BeginGUI). Нет этих членов в сборке Unity — false, кадр как раньше.
+        /// </summary>
+        private static bool ResetLayout()
+        {
+            if (OriginalGuiId == null || LayoutBegin == null)
+            {
+                if (!_layoutResetWarned)
+                {
+                    _layoutResetWarned = true;
+                    ArenaPlugin.Log.LogWarning("GUILayoutUtility.Begin / GUIUtility.s_OriginalID not found: windows are not re-laid out after a click.");
+                }
+                return false;
+            }
+            try
+            {
+                LayoutBegin.Invoke(null, new object[] { (int)OriginalGuiId.GetValue(null) });
+                return true;
+            }
+            catch (Exception e)
+            {
+                if (!_layoutResetWarned)
+                {
+                    _layoutResetWarned = true;
+                    ArenaPlugin.Log.LogWarning("Layout reset failed: " + e.Message);
+                }
+                return false;
+            }
         }
 
         /// <summary>Размер и место окон — в долях виртуального экрана; при смене разрешения раскладка пересчитывается.</summary>

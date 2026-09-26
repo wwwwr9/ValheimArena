@@ -27,6 +27,7 @@ namespace ValheimArena.Core
         }
 
         private static readonly Dictionary<Player, Applied> State = new Dictionary<Player, Applied>();
+        private static readonly List<Collider> ColliderBuffer = new List<Collider>();
         private static float _tick;
 
         public static bool Invulnerable => ArenaSettingsStore.Current.playerInvulnerable;
@@ -180,7 +181,7 @@ namespace ValheimArena.Core
                 if (a.Collision == CollisionMode.ThroughCreatures)
                 {
                     foreach (var c in a.Ignored)
-                        if (c) Physics.IgnoreCollision(col, c, false);
+                        if (c && c.enabled && c.gameObject.activeInHierarchy) Physics.IgnoreCollision(col, c, false);
                     a.Ignored.Clear();
                 }
                 else if (a.Collision == CollisionMode.Disabled)
@@ -220,9 +221,11 @@ namespace ValheimArena.Core
                 {
                     if (!ch || ch.IsPlayer()) continue;
                     if ((ch.transform.position - pp).sqrMagnitude > 150f * 150f) continue;
-                    foreach (var c in ch.GetComponentsInChildren<Collider>())
+                    ch.GetComponentsInChildren(false, ColliderBuffer);
+                    foreach (var c in ColliderBuffer)
                     {
-                        if (!c || c.isTrigger) continue;
+                        // Выключенные коллайдеры (надетое оружие существ) Unity в IgnoreCollision не принимает — пишет ошибку.
+                        if (!c || c.isTrigger || !c.enabled) continue;
                         Physics.IgnoreCollision(col, c, true);
                         a.Ignored.Add(c);
                     }

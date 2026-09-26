@@ -50,7 +50,7 @@ namespace ValheimArena.Profiles
             if (!File.Exists(path)) return null;
             try
             {
-                var p = JsonUtility.FromJson<CreatureProfile>(File.ReadAllText(path));
+                var p = Normalize(JsonIO.FromJson<CreatureProfile>(File.ReadAllText(path)), prefab);
                 if (p == null) return null;
                 p.prefab = prefab;
                 p.name = name;
@@ -69,7 +69,7 @@ namespace ValheimArena.Profiles
             if (p == null || string.IsNullOrEmpty(p.prefab) || string.IsNullOrEmpty(p.name)) return;
             p.name = FileNames.Sanitize(p.name);
             Directory.CreateDirectory(Dir(p.prefab));
-            File.WriteAllText(FilePath(p.prefab, p.name), JsonUtility.ToJson(p, true));
+            File.WriteAllText(FilePath(p.prefab, p.name), JsonIO.ToJson(p, true));
             Cache[Key(p.prefab, p.name)] = p.Clone();
         }
 
@@ -80,13 +80,46 @@ namespace ValheimArena.Profiles
             Cache.Remove(Key(prefab, name));
         }
 
-        public static string ToJson(CreatureProfile p) => p == null ? "" : JsonUtility.ToJson(p);
+        public static string ToJson(CreatureProfile p) => p == null ? "" : JsonIO.ToJson(p);
 
         public static CreatureProfile FromJson(string json)
         {
             if (string.IsNullOrEmpty(json)) return null;
-            try { return JsonUtility.FromJson<CreatureProfile>(json); }
+            try
+            {
+                var p = JsonIO.FromJson<CreatureProfile>(json);
+                return Normalize(p, p?.prefab);
+            }
             catch { return null; }
+        }
+
+        /// <summary>
+        /// Чего нет в тексте — как в игре. Профили, записанные до перехода на Newtonsoft.Json (JsonUtility терял
+        /// вложенные классы), приходят без сопротивлений и атак: «все обычные» сняли бы с существа ванильные
+        /// иммунитеты, поэтому сопротивления берутся с прототипа, а списки — пустые (атаки остаются ванильными).
+        /// </summary>
+        private static CreatureProfile Normalize(CreatureProfile p, string prefab)
+        {
+            if (p == null) return null;
+            if (p.resists == null)
+            {
+                var go = ZNetScene.instance && !string.IsNullOrEmpty(prefab) ? ZNetScene.instance.GetPrefab(prefab) : null;
+                var ch = go ? go.GetComponent<Character>() : null;
+                p.resists = ch ? ResistSet.From(ch.m_damageModifiers) : new ResistSet();
+            }
+            if (p.attacks == null) p.attacks = new List<AttackOverride>();
+            if (p.effects == null) p.effects = new List<EffectOverride>();
+            if (p.weakSpots == null) p.weakSpots = new List<WeakSpotOverride>();
+            foreach (var a in p.attacks)
+            {
+                if (a.damage == null) a.damage = new DamageSet();
+                if (a.damagePerLevel == null) a.damagePerLevel = new DamageSet();
+                if (a.effects == null) a.effects = new List<string>();
+            }
+            foreach (var e in p.effects)
+                if (e.damage == null) e.damage = new DamageSet();
+            p.weakSpots.RemoveAll(w => w == null || w.resists == null);
+            return p;
         }
     }
 }

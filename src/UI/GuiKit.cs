@@ -144,11 +144,14 @@ namespace ValheimArena.UI
 
         // ------------------------------------------------------------------ кнопки
 
-        public static bool Press(string text, GUIStyle style, params GUILayoutOption[] opts)
+        public static bool Press(string text, GUIStyle style, params GUILayoutOption[] opts) => Press(text, style, text, opts);
+
+        /// <summary>Кнопка с явным ключом — для подписей, которые меняются сами (счётчик, состояние боя).</summary>
+        public static bool Press(string text, GUIStyle style, string key, params GUILayoutOption[] opts)
         {
             var content = new GUIContent(text);
             Rect r = GUILayoutUtility.GetRect(content, style, opts);
-            bool fired = UiInput.Clickable(r, out bool hover);
+            bool fired = UiInput.Clickable(r, key, out bool hover);
             if (Repaint) style.Draw(r, content, hover, hover && UiInput.Held, false, false);
             return fired;
         }
@@ -181,7 +184,7 @@ namespace ValheimArena.UI
             var content = new GUIContent(text);
             Vector2 size = Label.CalcSize(content);
             Rect r = GUILayoutUtility.GetRect(size.x + 22f, Mathf.Max(18f, size.y), GUILayout.ExpandWidth(false));
-            bool fired = UiInput.Clickable(r, out bool hover);
+            bool fired = UiInput.Clickable(r, text, out bool hover);
             if (Repaint)
             {
                 DrawCheck(new Rect(r.x, r.y + (r.height - 14f) * 0.5f, 14f, 14f), value, hover);
@@ -191,11 +194,11 @@ namespace ValheimArena.UI
             return fired ? !value : value;
         }
 
-        /// <summary>Флажок без подписи фиксированной ширины (матрицы).</summary>
-        public static bool ToggleBox(bool value, float width)
+        /// <summary>Флажок без подписи фиксированной ширины (матрицы); ключ — клетка матрицы или строка списка.</summary>
+        public static bool ToggleBox(bool value, float width, string key = "□")
         {
             Rect r = GUILayoutUtility.GetRect(width, 18f, GUILayout.Width(width), GUILayout.Height(18f));
-            bool fired = UiInput.Clickable(r, out bool hover);
+            bool fired = UiInput.Clickable(r, key, out bool hover);
             if (Repaint) DrawCheck(new Rect(r.x + (r.width - 14f) * 0.5f, r.y + 2f, 14f, 14f), value, hover);
             return fired ? !value : value;
         }
@@ -227,21 +230,21 @@ namespace ValheimArena.UI
 
         // ------------------------------------------------------------------ ползунок и числа
 
-        public static float SliderBar(float value, float min, float max)
+        public static float SliderBar(float value, float min, float max, string key)
         {
             Rect r = GUILayoutUtility.GetRect(120f, 20f, GUILayout.MinWidth(120f), GUILayout.ExpandWidth(true), GUILayout.Height(20f));
-            var frac = UiInput.Drag(r);
+            var frac = UiInput.Drag(r, key, out bool dragging);
             if (frac.HasValue) value = Mathf.Lerp(min, max, frac.Value);
             if (Repaint)
             {
-                bool hover = UiInput.IsHover(r);
+                bool hover = UiInput.IsHover(r) || dragging;
                 float f = Mathf.Approximately(max, min) ? 0f : Mathf.Clamp01((value - min) / (max - min));
                 var old = GUI.color;
                 GUI.color = new Color(0f, 0f, 0f, 0.7f);
                 GUI.DrawTexture(new Rect(r.x, r.y + 8f, r.width, 4f), White);
                 GUI.color = new Color(Accent.r, Accent.g, Accent.b, 0.8f);
                 GUI.DrawTexture(new Rect(r.x, r.y + 8f, r.width * f, 4f), White);
-                GUI.color = hover || UiInput.DragId >= 0 ? Color.white : new Color(0.85f, 0.8f, 0.72f);
+                GUI.color = hover ? Color.white : new Color(0.85f, 0.8f, 0.72f);
                 GUI.DrawTexture(new Rect(r.x + r.width * f - 5f, r.y + 3f, 10f, 14f), White);
                 GUI.color = old;
             }
@@ -253,7 +256,7 @@ namespace ValheimArena.UI
         {
             GUILayout.BeginHorizontal();
             GUILayout.Label(label, Label, GUILayout.Width(labelWidth));
-            float nv = SliderBar(value, min, max);
+            float nv = SliderBar(value, min, max, id);
             if (!Mathf.Approximately(nv, value)) { value = nv; Buffers.Remove(id); }
             value = NumberBox(value, id, fmt, 64f);
             if (!string.IsNullOrEmpty(suffix)) GUILayout.Label(suffix, Small, GUILayout.Width(22));
@@ -311,7 +314,7 @@ namespace ValheimArena.UI
             value = value ?? "";
             var content = new GUIContent(value.Length > 0 ? value : " ");
             Rect r = GUILayoutUtility.GetRect(content, Field, opts);
-            if (UiInput.Clickable(r, out bool hover)) UiInput.Focus(id);
+            if (UiInput.Clickable(r, id, out bool hover, UiInput.KindText)) UiInput.Focus(id);
             value = UiInput.ApplyTyping(id, value, out _);
             if (Repaint)
             {

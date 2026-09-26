@@ -161,7 +161,8 @@ namespace ValheimArena.Core
 
             if (r.heightLimit > 0f && ch.IsFlying())
             {
-                float ceiling = Arena.GroundHeight(pos) + r.heightLimit;
+                // Над водой — от поверхности воды, как крейсерская высота летунов (ArenaFlight.Surface), а не от дна.
+                float ceiling = Mathf.Max(Arena.GroundHeight(pos), ZoneSystem.instance ? ZoneSystem.instance.m_waterLevel : float.MinValue) + r.heightLimit;
                 if (pos.y > ceiling)
                 {
                     pos.y = ceiling;

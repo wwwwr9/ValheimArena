@@ -178,6 +178,8 @@ namespace ValheimArena.Core
             {
                 int.TryParse(cmd.Substring(6), out var mask);
                 what = (ClearWhat)mask & ClearWhat.All;
+                // Надгробия — это вещи других игроков: гость убирает их, только если это разрешает и сам хозяин.
+                if (fromGuest && !S.clearTombstones) what &= ~ClearWhat.Tombstones;
                 cmd = "clear";
             }
             switch (cmd)
@@ -311,7 +313,7 @@ namespace ValheimArena.Core
                     if (Current == s)
                     {
                         Current = PickCurrent();
-                        Message(L.T("Арена игрока ") + s.HostName + L.T(" свёрнута."));
+                        Message(L.F("Арена игрока {0} свёрнута.", s.HostName));
                     }
                 }
                 return;
@@ -345,8 +347,8 @@ namespace ValheimArena.Core
         {
             var s = Local;
             if (s == null || s.Id != sessionId) return;
-            foreach (var kv in dealt) s.Stat(kv.Key).dealt += kv.Value;
-            foreach (var kv in taken) s.Stat(kv.Key).taken += kv.Value;
+            foreach (var kv in dealt) { var st = s.Stat(kv.Key); if (st != null) st.dealt += kv.Value; }
+            foreach (var kv in taken) { var st = s.Stat(kv.Key); if (st != null) st.taken += kv.Value; }
             s.StatsDirty = true;
         }
 
@@ -357,6 +359,7 @@ namespace ValheimArena.Core
             s.AddFeed(e);
             if (!s.IsLocal) return;
             var v = s.Stat(e.victimKey);
+            if (v == null) return;
             if (string.IsNullOrEmpty(v.label))
             {
                 v.label = e.victim;
@@ -508,6 +511,7 @@ namespace ValheimArena.Core
             zdo.Set(ArenaUnit.ZBehavior, behavior);
             zdo.Set(ArenaUnit.ZAdopted, kind);
             zdo.Set(ArenaUnit.ZOrigin, c.transform.position);
+            ArenaUnit.RememberWorldFlags(c, zdo);
             var u = ArenaUnit.Attach(c);
             if (s.State == ArenaState.Fighting) u.AlertPending = true;
             return u;
@@ -584,10 +588,13 @@ namespace ValheimArena.Core
             return new Vector3(c.x, 0f, c.y);
         }
 
+        private static int _groundMask;
+
         public static float GroundHeight(Vector3 p)
         {
-            int mask = LayerMask.GetMask("terrain", "Default", "static_solid", "piece");
-            if (Physics.Raycast(new Vector3(p.x, p.y + 400f, p.z), Vector3.down, out var hit, 1000f, mask))
+            // Маска — один раз: GroundHeight зовётся каждый физический такт для каждого летуна под потолком.
+            if (_groundMask == 0) _groundMask = LayerMask.GetMask("terrain", "Default", "static_solid", "piece");
+            if (Physics.Raycast(new Vector3(p.x, p.y + 400f, p.z), Vector3.down, out var hit, 1000f, _groundMask))
                 return hit.point.y;
             return ZoneSystem.instance ? ZoneSystem.instance.GetGroundHeight(p) : p.y;
         }
@@ -619,6 +626,8 @@ namespace ValheimArena.Core
             {
                 _tickSecond = 1f;
                 ArenaUnit.PruneDead();
+                ArenaUnit.SyncWithZdo();
+                SyncTimeScale();
                 foreach (var u in ArenaUnit.All)
                 {
                     if (!u) continue;
@@ -784,7 +793,8 @@ namespace ValheimArena.Core
             if (!ZNet.instance || !ZNet.instance.IsServer()) return;
             foreach (var u in ArenaUnit.All)
             {
-                if (!u || !u.NView || !u.NView.IsValid() || u.NView.GetZDO().HasOwner()) continue;
+                // Владелец отключился — игра с постоянного объекта владельца не снимает: он такой же «ничей».
+                if (!u || !u.NView || !u.NView.IsValid() || Patches.KeepArenaOwnershipPatch.Connected(u.NView.GetZDO().GetOwner())) continue;
                 u.NView.ClaimOwnership();
                 if (OwnerlessLogged.Add(u.Key))
                     ArenaPlugin.Log.LogInfo(L.F("Боец без владельца (вне активной зоны игроков): {0} — управление взял сервер.", Label(u)));
@@ -856,7 +866,7 @@ namespace ValheimArena.Core
                     }
                     foreach (var p in Player.GetAllPlayers())
                     {
-                        if (!p || p.IsDead() || !s.IsInside(p.transform.position, 5f)) continue;
+                        if (!p || p.IsDead() || p.InGhostMode() || p.InDebugFlyMode() || !s.IsInside(p.transform.position, 5f)) continue;
                         if (!BaseAI.IsEnemy(u.Character, p)) continue;
                         float d = (p.transform.position - pos).sqrMagnitude;
                         if (d < bestD) { bestD = d; best = p; }
@@ -1115,6 +1125,22 @@ namespace ValheimArena.Core
             }
             TimeScale = scale;
             if (Game.instance) Game.FadeTimeScale(scale);
+        }
+
+        /// <summary>Игра сняла паузу и поставила ×1 — вернуть ход времени арены (или признать ×1, если менять нельзя).</summary>
+        public static void OnGameUnpaused()
+        {
+            if (Mathf.Abs(TimeScale - 1f) < 0.001f) return;
+            if (CanControlTime() && Game.instance) Game.FadeTimeScale(TimeScale);
+            else TimeScale = 1f;
+        }
+
+        /// <summary>Подключился игрок — игра сама идёт на ×1; показываем ×1 и не возвращаемся к остановке, когда он уйдёт.</summary>
+        private static void SyncTimeScale()
+        {
+            if (Mathf.Abs(TimeScale - 1f) < 0.001f || CanControlTime()) return;
+            TimeScale = 1f;
+            if (Game.instance) Game.FadeTimeScale(1f);
         }
 
         public static void StepTimeScale(int dir)

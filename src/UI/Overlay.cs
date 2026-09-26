@@ -71,7 +71,7 @@ namespace ValheimArena.UI
 
         private static void DrawTopBar(float w, ArenaSession arena)
         {
-            string head = (arena.IsLocal ? L.T("Арена") : L.T("Арена игрока ") + arena.HostName) + " · " + arena.StateName;
+            string head = (arena.IsLocal ? L.T("Арена") : L.F("Арена игрока {0}", arena.HostName)) + " · " + arena.StateName;
             if (arena.State == ArenaState.Fighting || arena.State == ArenaState.Paused)
                 head += " · " + GuiKit.FmtTime(arena.FightSeconds);
             if (Mathf.Abs(Arena.TimeScale - 1f) > 0.001f)

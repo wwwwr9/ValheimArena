@@ -19,7 +19,7 @@ namespace ValheimArena.Core
     public static class ArenaNet
     {
         /// <summary>Версия протокола: клиенты с другой версией состояние чужой арены не принимают.</summary>
-        public const int Protocol = 5;
+        public const int Protocol = 6;
 
         private const string RState = "VA_State";
         private const string RHello = "VA_Hello";
@@ -80,13 +80,13 @@ namespace ValheimArena.Core
         private static ZPackage Json(object o)
         {
             var pkg = new ZPackage();
-            pkg.Write(JsonUtility.ToJson(o));
+            pkg.Write(JsonIO.ToJson(o));
             return pkg;
         }
 
         private static T ReadJson<T>(ZPackage pkg) where T : class
         {
-            try { return JsonUtility.FromJson<T>(pkg.ReadString()); }
+            try { return JsonIO.FromJson<T>(pkg.ReadString()); }
             catch (Exception e)
             {
                 ArenaPlugin.Log.LogWarning(L.F("Сообщение арены не разобрано ({0}): {1}", typeof(T).Name, e.Message));

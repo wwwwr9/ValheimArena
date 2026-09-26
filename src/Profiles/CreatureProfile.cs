@@ -260,7 +260,8 @@ namespace ValheimArena.Profiles
         public float scale = 1f;
         public float damageDealtMultiplier = 1f;
         public float damageTakenMultiplier = 1f;
-        public ResistSet resists = new ResistSet();
+        /// <summary>Без инициализатора: нет в тексте — берутся с прототипа (ProfileStore.Normalize), а не «все обычные».</summary>
+        public ResistSet resists;
         public float staggerDamageFactor;
         public bool staggerWhenBlocked = true;
         public float regenAllHPTime;
@@ -316,7 +317,7 @@ namespace ValheimArena.Profiles
         public CreatureProfile Clone()
         {
             var c = (CreatureProfile)MemberwiseClone();
-            c.resists = resists.Clone();
+            c.resists = resists?.Clone();
             c.attacks = new List<AttackOverride>();
             foreach (var a in attacks) c.attacks.Add(a.Clone());
             c.effects = new List<EffectOverride>();

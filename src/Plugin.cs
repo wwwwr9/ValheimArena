@@ -14,7 +14,7 @@ namespace ValheimArena
     {
         public const string Guid = "valheimarena.arena";
         public const string ModName = "Valheim Arena";
-        public const string Version = "1.3.0";
+        public const string Version = "1.3.1";
 
         internal static ArenaPlugin Instance;
         internal static ManualLogSource Log;
@@ -83,14 +83,18 @@ namespace ValheimArena
                 new AcceptableValueRange<float>(0.5f, 2.5f)));
             KeyMenu = Config.Bind("Keys", "Arena menu", KeyCode.F7, "Open/close the arena menu. / Открыть/закрыть меню арены.");
             KeyEditor = Config.Bind("Keys", "Creature editor", KeyCode.F8, "Open/close the creature editor. / Открыть/закрыть редактор существ.");
-            KeyCamera = Config.Bind("Keys", "Camera mode", KeyCode.F9, "Player camera → free → follow. / Камера игрока → свободная → слежение.");
+            KeyCamera = Config.Bind("Keys", "Camera mode", KeyCode.F3,
+                "Player camera → free → follow. Not F9: the game uses it to switch the gamepad layout. / " +
+                "Камера игрока → свободная → слежение. Не F9: ею игра переключает раскладку геймпада.");
+            // До 1.3.1 по умолчанию стояла F9 — она же у игры меняет и сохраняет раскладку геймпада.
+            if (KeyCamera.Value == KeyCode.F9) KeyCamera.Value = KeyCode.F3;
             KeyFight = Config.Bind("Keys", "Start or pause fight", KeyCode.F6, "Deploy the arena, start, pause or resume the fight. / Развернуть арену, начать бой, пауза, продолжить.");
             KeyNextTarget = Config.Bind("Keys", "Next target", KeyCode.RightBracket, "Follow camera: next fighter. / Слежение: следующий боец.");
             KeyPrevTarget = Config.Bind("Keys", "Previous target", KeyCode.LeftBracket, "Follow camera: previous fighter. / Слежение: предыдущий боец.");
             KeySlower = Config.Bind("Keys", "Slower time", KeyCode.Minus, "Single player / own server without other players only. / Только без других игроков.");
             KeyFaster = Config.Bind("Keys", "Faster time", KeyCode.Equals, "Single player / own server without other players only. / Только без других игроков.");
             KeyOverlay = Config.Bind("Keys", "Overlay", KeyCode.F10, "Show/hide the whole arena overlay: name tags, scores, kill feed. / Показать/скрыть весь оверлей арены: таблички, счёт, ленту убийств.");
-            KeyTags = Config.Bind("Keys", "Name tags", KeyCode.F4, "Show/hide the bars over fighters: name, stars, health bar. / Показать/скрыть таблички над бойцами: имя, звёзды, полоска здоровья.");
+            KeyTags = Config.Bind("Keys", "Name tags", KeyCode.F4, "Show/hide the name tags over fighters: name, stars, health bar. / Показать/скрыть таблички над бойцами: имя, звёзды, полоска здоровья.");
             MouseSensitivity = Config.Bind("Camera", "Mouse sensitivity", 1f, new ConfigDescription(
                 "Mouse sensitivity multiplier for the free and follow cameras. / Множитель чувствительности мыши для свободной камеры и слежения.",
                 new AcceptableValueRange<float>(0.1f, 5f)));

@@ -248,7 +248,7 @@ namespace ValheimArena.Profiles
 
             if (p.health > 0f) ch.m_health = p.health;
             unit.transform.localScale = unit.BaseScale * Mathf.Max(0.05f, p.scale);
-            ch.m_damageModifiers = p.resists.ToModifiers();
+            if (p.resists != null) ch.m_damageModifiers = p.resists.ToModifiers();
             // Слабые места — компоненты экземпляра: правка касается только этого бойца.
             if (ch.m_weakSpots != null && p.weakSpots != null && p.weakSpots.Count > 0)
                 foreach (var ws in ch.m_weakSpots)
