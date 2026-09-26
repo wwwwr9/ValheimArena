@@ -1,9 +1,13 @@
 # Changelog
 
-## Unreleased
+## 1.5.0
 
 Network protocol 7: all players need the same version of the mod.
 
+- F1 hides and shows the game's own interface: HUD, minimap, bars over creatures, game messages, chat and key
+  hints. The arena overlay, the arena's messages and the mod's windows stay on screen. The same option is in the
+  Camera tab, and the key can be changed in the config.
+- With Ctrl held, the mod's function keys no longer react, so the game's own Ctrl combinations work undisturbed.
 - The fight time no longer counts pauses.
 - Results and kill feed messages are shown in each player's own language.
 - In "Free for all", fighters of different players are no longer merged into one side in the results.
@@ -27,6 +31,11 @@ Network protocol 7: all players need the same version of the mod.
 
 Сетевой протокол 7: у всех игроков должна быть одна версия мода.
 
+- F1 скрывает и показывает интерфейс самой игры: HUD, миникарту, полоски над существами, сообщения игры, чат
+  и подсказки клавиш. Оверлей арены, её сообщения и окна мода остаются на экране. Тот же флажок есть на вкладке
+  «Камера», а клавиша меняется в настройках.
+- При зажатом Ctrl функциональные клавиши мода больше не срабатывают, и сочетания самой игры с Ctrl работают
+  без помех.
 - Время боя не учитывает паузы.
 - Итоги и лента убийств показываются на языке каждого игрока.
 - В режиме «Все против всех» бойцы разных игроков больше не сливаются в итогах в одну сторону.
@@ -47,19 +56,6 @@ Network protocol 7: all players need the same version of the mod.
   от регистра.
 - Боец с нулевым здоровьем, который не погиб, погибает; повторное вовлечение того же чужака снова работает.
 - PatchCheck проверяет и AccessTools.Field, и типы параметров в AccessTools.Method.
-
-## 1.4.0
-
-- F1 hides and shows the game's own interface: HUD, minimap, bars over creatures, game messages, chat and key
-  hints. The arena overlay, the arena's messages and the mod's windows stay on screen. The same option is in the
-  Camera tab, and the key can be changed in the config.
-- With Ctrl held, the mod's function keys no longer react, so the game's own Ctrl combinations work undisturbed.
-
-- F1 скрывает и показывает интерфейс самой игры: HUD, миникарту, полоски над существами, сообщения игры, чат
-  и подсказки клавиш. Оверлей арены, её сообщения и окна мода остаются на экране. Тот же флажок есть на вкладке
-  «Камера», а клавиша меняется в настройках.
-- При зажатом Ctrl функциональные клавиши мода больше не срабатывают, и сочетания самой игры с Ctrl работают
-  без помех.
 
 ## 1.3.1
 
