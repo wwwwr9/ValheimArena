@@ -1,5 +1,53 @@
 # Changelog
 
+## Unreleased
+
+Network protocol 7: all players need the same version of the mod.
+
+- The fight time no longer counts pauses.
+- Results and kill feed messages are shown in each player's own language.
+- In "Free for all", fighters of different players are no longer merged into one side in the results.
+- The host no longer declares a false draw while the arena is outside the area the game updates around them;
+  the result waits until the host returns.
+- When a guest starts the fight right after releasing fighters, the host waits a few seconds for them to appear;
+  if the fight still does not start, the guest is told why.
+- Statistics are sent to guests as changed rows only.
+- Fighters of an arena run by another version of the mod are no longer removed as orphans after 30 seconds.
+- Clearing the arena no longer lowers the world's active boss count twice for the same boss.
+- Changing a live fighter's profile starts from the vanilla creature, so nothing from the previous profile remains.
+- Weak spots with the same name are edited separately; attacks are matched by item prefab only.
+- Creatures spawned by a destroyed object are no longer recruited to the side of the fighter who broke it.
+- Only the arena host, or guests when allowed, can change a fighter's profile.
+- Guests see the host's countdown in the rules.
+- Number fields ignore NaN and infinity; AltGr characters can be typed in text fields.
+- Profile and scenario lists are no longer read from disk several times per frame; profile names are matched
+  regardless of letter case.
+- A fighter left at zero health without dying is killed, and repeated recruiting of the same intruder works again.
+- PatchCheck also verifies AccessTools.Field and the parameter types given to AccessTools.Method.
+
+Сетевой протокол 7: у всех игроков должна быть одна версия мода.
+
+- Время боя не учитывает паузы.
+- Итоги и лента убийств показываются на языке каждого игрока.
+- В режиме «Все против всех» бойцы разных игроков больше не сливаются в итогах в одну сторону.
+- Хозяин больше не объявляет ложную ничью, пока арена вне зоны, которую игра обновляет вокруг него: итог
+  дождётся его возвращения.
+- Если гость начинает бой сразу после выпуска бойцов, хозяин несколько секунд ждёт их появления; если бой так
+  и не начался, гость узнаёт почему.
+- Статистика уходит гостям только изменившимися строками.
+- Бойцы арены, которую ведёт другая версия мода, больше не удаляются через 30 секунд как бойцы исчезнувшей арены.
+- Очистка арены больше не снимает одного босса со счётчика активных боссов мира дважды.
+- Смена профиля живому бойцу начинается от ванильного существа: от прежнего профиля ничего не остаётся.
+- Одноимённые слабые места настраиваются по отдельности; атаки сопоставляются только по префабу предмета.
+- Существа из разрушенного объекта больше не встают на сторону бойца, который его разрушил.
+- Профиль бойца меняет только хозяин арены или, если он разрешил, гость.
+- Гость видит в правилах отсчёт хозяина.
+- Числовые поля не принимают NaN и бесконечность; в текстовых полях набираются символы через AltGr.
+- Списки профилей и сценариев больше не читаются с диска по нескольку раз за кадр; имена профилей не зависят
+  от регистра.
+- Боец с нулевым здоровьем, который не погиб, погибает; повторное вовлечение того же чужака снова работает.
+- PatchCheck проверяет и AccessTools.Field, и типы параметров в AccessTools.Method.
+
 ## 1.4.0
 
 - F1 hides and shows the game's own interface: HUD, minimap, bars over creatures, game messages, chat and key

@@ -124,16 +124,16 @@ namespace ValheimArena.Core
             // Бойцы — свои всегда; чужих хозяин забирает, если их владелец (например, без мода) сам не уберёт.
             if ((what & ClearWhat.Creatures) != 0)
             {
+                long me = ZDOMan.GetSessionID();
                 // Бойцы без экземпляра здесь (далеко, вне активной зоны, замороженные без владельца) — по данным мира.
                 int bosses = 0;
                 if (claimOthers && ZDOMan.instance != null)
                 {
-                    long me = ZDOMan.GetSessionID();
                     foreach (var zdo in new List<ZDO>(ObjectsById(ZDOMan.instance).Values))
                     {
                         if (!zdo.IsValid() || !zdo.GetBool(UnitHash) || zdo.GetString(SessionHash) != s.Id) continue;
                         if (ZNetScene.instance.FindInstance(zdo)) continue; // экземпляр уберётся ниже, как боец
-                        if (zdo.GetBool(ZDOVars.s_bossCount)) bosses++;
+                        if (zdo.GetBool(ZDOVars.s_bossCount) && ReleasesBossKey(zdo.GetOwner(), me)) bosses++;
                         zdo.SetOwner(me);
                         ZDOMan.instance.DestroyZDO(zdo);
                         Bump(counts, ClearWhat.Creatures);
@@ -144,7 +144,7 @@ namespace ValheimArena.Core
                 {
                     if (!u || u.SessionId != s.Id) continue;
                     if (!u.IsOwner && !claimOthers) continue;
-                    if (u.NView && u.NView.IsValid() && u.NView.GetZDO().GetBool(ZDOVars.s_bossCount)) bosses++;
+                    if (u.NView && u.NView.IsValid() && u.NView.GetZDO().GetBool(ZDOVars.s_bossCount) && ReleasesBossKey(u.NView.GetZDO().GetOwner(), me)) bosses++;
                     Arena.DespawnUnit(u, adjustBossKey: false);
                     Bump(counts, ClearWhat.Creatures);
                 }
@@ -170,6 +170,12 @@ namespace ValheimArena.Core
             }
             return counts;
         }
+
+        /// <summary>
+        /// Встревоженного босса с ключа мира activeBosses снимает тот, кто им управлял: чужого бойца хозяин убирает
+        /// вместе с его владельцем, и двое сняли бы одного босса дважды. Владельца нет в игре — снимает хозяин.
+        /// </summary>
+        private static bool ReleasesBossKey(long owner, long me) => owner == me || !Patches.KeepArenaOwnershipPatch.Connected(owner);
 
         private static void Bump(Dictionary<ClearWhat, int> d, ClearWhat k)
         {

@@ -225,20 +225,27 @@ namespace ValheimArena.Core
             }
         }
 
+        /// <summary>Стороны от этого номера — «сам за себя» (режим «Все против всех»).</summary>
+        public const int SoloSides = 100000;
+
         /// <summary>Сторона бойца для подсчёта победителя.</summary>
         public static int SideOf(ArenaUnit u)
         {
             var mode = (HostilityMode)(u.Rules?.hostilityMode ?? 0);
-            return SideOf(mode, u.Team, (int)u.Character.GetFaction(), u.SerialNumber);
+            return SideOf(mode, u.Team, (int)u.Character.GetFaction(), u.Key);
         }
 
-        public static int SideOf(HostilityMode mode, int team, int faction, int serial)
+        /// <summary>
+        /// Сторона по данным бойца. «Сам за себя» — по полному ключу ZDO (игрок + номер объекта): номера объектов
+        /// у каждого игрока свои, и одинаковый номер у бойцов разных игроков слил бы их в одну сторону.
+        /// </summary>
+        public static int SideOf(HostilityMode mode, int team, int faction, string key)
         {
             switch (mode)
             {
                 case HostilityMode.Teams: return team;
                 case HostilityMode.Factions: return 1000 + faction;
-                default: return 100000 + serial;
+                default: return SoloSides + ((key ?? "").GetStableHashCode() & 0x3FFFFFFF);
             }
         }
 
@@ -246,14 +253,14 @@ namespace ValheimArena.Core
         {
             if (side == 0) return L.T("Посторонние");
             if (side < 1000) return L.F("Команда «{0}»", TeamName(side));
-            if (side < 100000) return L.F("Фракция «{0}»", FactionName(side - 1000));
+            if (side < SoloSides) return L.F("Фракция «{0}»", FactionName(side - 1000));
             return string.IsNullOrEmpty(soloLabel) ? L.T("Одиночка") : soloLabel;
         }
 
         public static Color SideColor(int side, int team)
         {
             if (side < 1000) return TeamColor(side);
-            if (side < 100000) return FactionColor(side - 1000);
+            if (side < SoloSides) return FactionColor(side - 1000);
             return TeamColor(team);
         }
 

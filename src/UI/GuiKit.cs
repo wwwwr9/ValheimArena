@@ -285,7 +285,9 @@ namespace ValheimArena.UI
                 if (nb != buf)
                 {
                     Buffers[id] = nb;
-                    if (float.TryParse(nb.Replace(',', '.'), NumberStyles.Float, Inv, out var parsed)) value = parsed;
+                    // «NaN», «Infinity» и 1e99 разбираются как числа — в параметры существа они не попадают.
+                    if (float.TryParse(nb.Replace(',', '.'), NumberStyles.Float, Inv, out var parsed) && !float.IsNaN(parsed) && !float.IsInfinity(parsed))
+                        value = parsed;
                 }
                 else if (!Buffers.ContainsKey(id)) Buffers[id] = buf;
             }

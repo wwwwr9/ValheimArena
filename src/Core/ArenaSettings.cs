@@ -257,14 +257,19 @@ namespace ValheimArena.Core
             else File.Move(tmp, path);
         }
 
+        private static List<string> _scenarios;
+        private static readonly ListTimer ScenarioTimer = new ListTimer();
+
+        /// <summary>Имена сценариев (список только для чтения; с диска — не чаще раза в 2 с, см. <see cref="ListTimer"/>).</summary>
         public static List<string> ListScenarios()
         {
+            if (_scenarios != null && !ScenarioTimer.Expired()) return _scenarios;
             var list = new List<string>();
-            if (!Directory.Exists(ScenarioDir)) return list;
-            foreach (var f in Directory.GetFiles(ScenarioDir, "*.json"))
-                list.Add(Path.GetFileNameWithoutExtension(f));
+            if (Directory.Exists(ScenarioDir))
+                foreach (var f in Directory.GetFiles(ScenarioDir, "*.json"))
+                    list.Add(Path.GetFileNameWithoutExtension(f));
             list.Sort(StringComparer.OrdinalIgnoreCase);
-            return list;
+            return _scenarios = list;
         }
 
         public static void SaveScenario(string name)
@@ -273,6 +278,7 @@ namespace ValheimArena.Core
             if (name.Length == 0) return;
             Directory.CreateDirectory(ScenarioDir);
             WriteAtomic(Path.Combine(ScenarioDir, name + ".json"), JsonIO.ToJson(Current, true));
+            _scenarios = null;
         }
 
         public static bool LoadScenario(string name)
@@ -299,6 +305,25 @@ namespace ValheimArena.Core
         {
             var path = Path.Combine(ScenarioDir, FileNames.Sanitize(name) + ".json");
             if (File.Exists(path)) File.Delete(path);
+            _scenarios = null;
+        }
+    }
+
+    /// <summary>
+    /// Срок жизни списков файлов, которые читают окна: не чаще раза в 2 с и не посреди кадра — проходы OnGUI
+    /// одного кадра (раскладка и отрисовка) должны видеть один и тот же список, иначе IMGUI собьётся.
+    /// </summary>
+    public class ListTimer
+    {
+        private float _time = float.MinValue;
+        private int _frame = -1;
+
+        public bool Expired()
+        {
+            if (Time.frameCount == _frame || Time.unscaledTime - _time < 2f) return false;
+            _frame = Time.frameCount;
+            _time = Time.unscaledTime;
+            return true;
         }
     }
 

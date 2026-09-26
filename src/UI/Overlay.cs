@@ -105,10 +105,10 @@ namespace ValheimArena.UI
                 var r = new Rect(w * 0.5f - 200f, h * 0.3f, 400f, 60f);
                 GuiKit.ShadowLabel(r, GuiKit.Colored(L.T("ПАУЗА"), GuiKit.Accent), GuiKit.Big, GuiKit.BigShadow);
             }
-            else if (arena.State == ArenaState.Finished && !string.IsNullOrEmpty(arena.Result) && ArenaSession.Now - arena.FightEnd < 12.0)
+            else if (arena.State == ArenaState.Finished && ArenaSession.Now - arena.FightEnd < 12.0 && !string.IsNullOrEmpty(arena.ResultText))
             {
                 var r = new Rect(w * 0.5f - 500f, h * 0.22f, 1000f, 30f);
-                GuiKit.ShadowLabel(r, GuiKit.Colored(arena.Result, GuiKit.Accent), _result, _resultShadow);
+                GuiKit.ShadowLabel(r, GuiKit.Colored(arena.ResultText, GuiKit.Accent), _result, _resultShadow);
             }
         }
 

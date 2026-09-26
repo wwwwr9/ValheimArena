@@ -44,7 +44,12 @@ namespace ValheimArena.Core
         public double CountdownEnd;
         public double FightStart;
         public double FightEnd;
+        /// <summary>Когда бой встал на паузу: на паузе время боя не идёт.</summary>
+        public double PauseStart;
+        /// <summary>Итог текстом на языке хозяина (для версий без разобранного итога).</summary>
         public string Result = "";
+        /// <summary>Разобранный итог: каждый клиент пишет его на своём языке (<see cref="ResultText"/>).</summary>
+        public ResultInfo Outcome;
         public int Revision;
         public ArenaRules Rules = new ArenaRules();
         public float LastHeard;
@@ -53,6 +58,10 @@ namespace ValheimArena.Core
         public readonly List<FeedEntry> Feed = new List<FeedEntry>();
         public readonly Dictionary<int, SideSummary> Sides = new Dictionary<int, SideSummary>();
         public bool StatsDirty;
+        /// <summary>Хозяин: строки, изменившиеся с последней рассылки.</summary>
+        public readonly HashSet<string> DirtyStats = new HashSet<string>();
+        /// <summary>Хозяин: следующая рассылка — вся статистика (после очистки или для нового игрока).</summary>
+        public bool StatsFull = true;
 
         public bool Live => IsLocal || Time.unscaledTime - LastHeard < StaleSeconds;
 
@@ -65,7 +74,8 @@ namespace ValheimArena.Core
             get
             {
                 if (State == ArenaState.Finished) return (float)(FightEnd - FightStart);
-                if (State == ArenaState.Fighting || State == ArenaState.Paused) return (float)(Now - FightStart);
+                if (State == ArenaState.Fighting) return (float)(Now - FightStart);
+                if (State == ArenaState.Paused) return (float)(PauseStart - FightStart);
                 return 0f;
             }
         }
@@ -86,6 +96,30 @@ namespace ValheimArena.Core
             }
         }
 
+        /// <summary>Итог боя на языке этого клиента.</summary>
+        public string ResultText
+        {
+            get
+            {
+                var o = Outcome;
+                if (o == null || o.kind == ResultInfo.None) return Result ?? "";
+                string text;
+                if (o.kind == ResultInfo.Draw)
+                {
+                    text = L.T("Ничья: не выжил никто.");
+                }
+                else
+                {
+                    var names = new List<string>();
+                    int n = o.sides?.Length ?? 0;
+                    for (int i = 0; i < n; i++)
+                        names.Add(Hostility.SideName(o.sides[i], o.solo != null && i < o.solo.Length ? o.solo[i] : ""));
+                    text = (names.Count == 1 ? L.T("Победа: ") : L.T("Победители: ")) + string.Join(", ", names) + L.F(" — выжило {0}.", o.alive);
+                }
+                return text + L.F(" Бой длился {0:0} с.", o.seconds);
+            }
+        }
+
         // ------------------------------------------------------------------ сеть
 
         public SessionState ToState()
@@ -101,7 +135,9 @@ namespace ValheimArena.Core
                 countdownEnd = CountdownEnd,
                 fightStart = FightStart,
                 fightEnd = FightEnd,
+                pauseStart = PauseStart,
                 result = Result ?? "",
+                outcome = Outcome,
                 revision = Revision,
                 rules = Rules
             };
@@ -120,7 +156,9 @@ namespace ValheimArena.Core
             CountdownEnd = s.countdownEnd;
             FightStart = s.fightStart;
             FightEnd = s.fightEnd;
+            PauseStart = s.pauseStart;
             Result = s.result ?? "";
+            Outcome = s.outcome;
             Revision = s.revision;
             if (s.rules != null) Rules = s.rules;
             LastHeard = Time.unscaledTime;
@@ -196,17 +234,32 @@ namespace ValheimArena.Core
             {
                 s = new UnitStat { key = key, spawnTime = Now };
                 Stats[key] = s;
-                StatsDirty = true;
+                MarkDirty(key);
             }
             return s;
         }
 
-        public void ReplaceStats(List<UnitStat> units)
+        /// <summary>Хозяин: строка изменилась — уйдёт гостям со следующей рассылкой.</summary>
+        public void MarkDirty(string key)
         {
-            Stats.Clear();
+            DirtyStats.Add(key);
+            StatsDirty = true;
+        }
+
+        /// <summary>
+        /// Гость: статистика от хозяина — вся или только изменившиеся строки. Название стороны — на языке
+        /// этого клиента.
+        /// </summary>
+        public void ApplyStats(List<UnitStat> units, bool full)
+        {
+            if (full) Stats.Clear();
             if (units != null)
                 foreach (var u in units)
-                    if (u != null && !string.IsNullOrEmpty(u.key)) Stats[u.key] = u;
+                {
+                    if (u == null || string.IsNullOrEmpty(u.key)) continue;
+                    u.sideName = Hostility.SideName(u.side, u.label);
+                    Stats[u.key] = u;
+                }
             RebuildSides();
         }
 
@@ -216,6 +269,9 @@ namespace ValheimArena.Core
             Feed.Clear();
             Sides.Clear();
             Result = "";
+            Outcome = null;
+            DirtyStats.Clear();
+            StatsFull = true;
             StatsDirty = true;
         }
 
@@ -243,7 +299,8 @@ namespace ValheimArena.Core
             Feed.Add(new FeedEntry
             {
                 Time = Time.unscaledTime,
-                Killer = e.killer,
+                // Без убийцы (огонь, падение, вода) подпись — на языке этого клиента.
+                Killer = string.IsNullOrEmpty(e.killer) ? L.T("стихия") : e.killer,
                 KillerColor = e.killerColor,
                 Victim = e.victim,
                 VictimColor = e.victimColor

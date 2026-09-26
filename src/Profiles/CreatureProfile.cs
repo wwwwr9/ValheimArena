@@ -296,11 +296,18 @@ namespace ValheimArena.Profiles
         public List<EffectOverride> effects = new List<EffectOverride>();
         public List<WeakSpotOverride> weakSpots = new List<WeakSpotOverride>();
 
+        /// <summary>
+        /// Атака по имени префаба предмета. Имя предмета (m_shared.m_name) — только если префаба нет: одно имя носят
+        /// разные атаки, и по нему атака получила бы значения чужой.
+        /// </summary>
         public AttackOverride FindAttack(string itemPrefab, string sharedName)
         {
             if (!string.IsNullOrEmpty(itemPrefab))
+            {
                 foreach (var a in attacks)
                     if (a.item == itemPrefab) return a;
+                return null;
+            }
             if (!string.IsNullOrEmpty(sharedName))
                 foreach (var a in attacks)
                     if (a.sharedName == sharedName) return a;

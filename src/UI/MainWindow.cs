@@ -213,7 +213,7 @@ namespace ValheimArena.UI
             GUILayout.Space(4);
             GUILayout.Label(L.T("Ход боя"), GuiKit.SubHeader);
             GUI.enabled = edit;
-            float cd = GuiKit.Slider(L.T("Отсчёт перед боем"), edit ? S.countdown : 0f, 0f, 10f, "countdown", "0.#", suffix: L.T("с"));
+            float cd = GuiKit.Slider(L.T("Отсчёт перед боем"), R.countdown, 0f, 10f, "countdown", "0.#", suffix: L.T("с"));
             if (edit) S.countdown = cd;
             bool fbs = GuiKit.Toggle(L.T("Бойцы ждут команды «Начать бой»"), R.freezeBeforeStart);
             bool faf = GuiKit.Toggle(L.T("Замораживать выживших после итога"), R.freezeAfterFinish);
@@ -774,8 +774,9 @@ namespace ValheimArena.UI
                 return;
             }
             if (!cur.IsLocal) GUILayout.Label(L.T("Статистику ведёт хозяин арены и присылает раз в пару секунд."), GuiKit.Muted);
-            if (!string.IsNullOrEmpty(cur.Result))
-                GUILayout.Label(GuiKit.Colored(cur.Result, GuiKit.Accent), GuiKit.Label);
+            string result = cur.ResultText;
+            if (!string.IsNullOrEmpty(result))
+                GUILayout.Label(GuiKit.Colored(result, GuiKit.Accent), GuiKit.Label);
             else if (cur.State == ArenaState.Fighting)
                 GUILayout.Label(L.T("Бой идёт."), GuiKit.Muted);
 
@@ -835,7 +836,7 @@ namespace ValheimArena.UI
                     GUILayout.Label(GuiKit.FmtTime((float)(f.deathTime - f.spawnTime)), GuiKit.Label, GUILayout.Width(70));
                     GUILayout.Label(f.dealt.ToString("0"), GuiKit.Label, GUILayout.Width(80));
                     GUILayout.Label(f.kills.ToString(), GuiKit.Label, GUILayout.Width(70));
-                    GUILayout.Label(f.killedBy, GuiKit.Label, GUILayout.Width(200));
+                    GUILayout.Label(string.IsNullOrEmpty(f.killedBy) ? L.T("стихия") : f.killedBy, GuiKit.Label, GUILayout.Width(200));
                     GUILayout.EndHorizontal();
                 }
             }

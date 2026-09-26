@@ -231,7 +231,9 @@ namespace ValheimArena.Core
                     _originalFallAsleepDistance = Monster.m_fallAsleepDistance;
                 }
                 _originalDeathEffects = c.m_deathEffects?.m_effectPrefabs;
-                // Смену профиля с чужого клиента выполняет владелец существа (он же пишет ZDO).
+                // Смену профиля с чужого клиента выполняет владелец существа (он же пишет ZDO). Регистрация живёт
+                // на ZNetView, а не на компоненте: у вовлечённого повторно чужака прежнюю снимаем перед новой.
+                NView.Unregister(RpcSetProfile);
                 NView.Register<string>(RpcSetProfile, RPC_SetProfile);
             }
 
@@ -274,6 +276,8 @@ namespace ValheimArena.Core
             var p = ProfileStore.FromJson(json);
             if (p != null)
             {
+                // Смена профиля — от ванили: чего нет в новом профиле (слабые места, атаки), не остаётся от прежнего.
+                if (Profile != null) ResetToVanilla();
                 Profile = p;
                 ProfileLogic.ApplyBase(this, p, keepHealthFraction: true);
                 if (ItemsApplied) ProfileLogic.ApplyItems(this, p);
@@ -383,9 +387,13 @@ namespace ValheimArena.Core
             ApplyProfileAsOwner(json);
         }
 
+        /// <summary>Профиль чужого бойца меняет хозяин его арены, а гость — если хозяин разрешил гостям управлять боем.</summary>
         private void RPC_SetProfile(long sender, string json)
         {
-            if (IsOwner) ApplyProfileAsOwner(json);
+            if (!IsOwner) return;
+            var s = Session;
+            if (s == null || (sender != s.HostPeer && !s.Rules.allowGuests)) return;
+            ApplyProfileAsOwner(json);
         }
 
         private void ApplyProfileAsOwner(string json)
@@ -480,6 +488,7 @@ namespace ValheimArena.Core
             // Ключ — та же C#-ссылка, поэтому удаление работает и для уже уничтоженного Character.
             if ((object)Character != null) ByCharacter.Remove(Character);
             if ((object)AI != null) ByAI.Remove(AI);
+            if (NView && NView.IsValid()) NView.Unregister(RpcSetProfile);
             All.Remove(this);
             Arena.OnUnitRemoved(this);
         }
