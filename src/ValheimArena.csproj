@@ -12,6 +12,8 @@
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     <Deterministic>true</Deterministic>
     <DebugType>portable</DebugType>
+    <!-- В сборке путь к исходникам и .pdb — условный (/_/), а не путь на машине, где собирали. -->
+    <PathMap>$(MSBuildProjectDirectory)=/_/</PathMap>
     <!-- Путь к игре можно переопределить: dotnet build -p:ValheimDir="D:\Games\Valheim" -->
     <ValheimDir Condition="'$(ValheimDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Valheim</ValheimDir>
     <ManagedDir>$(ValheimDir)\valheim_Data\Managed</ManagedDir>
