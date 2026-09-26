@@ -102,7 +102,7 @@ namespace ValheimArena.UI
             }
             if (kb != null && FocusId != null)
             {
-                bool ctrl = kb.ctrlKey.isPressed;
+                bool ctrl = kb.ctrlKey.isPressed && !kb.altKey.isPressed;
                 if (kb.backspaceKey.wasPressedThisFrame) { if (ctrl) _clear = true; else _backspace = true; }
                 if (kb.deleteKey.wasPressedThisFrame) _clear = true;
                 if (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame || kb.tabKey.wasPressedThisFrame) _submit = true;
@@ -123,7 +123,8 @@ namespace ValheimArena.UI
         private static void OnTextInput(char c)
         {
             if (FocusId == null || c < 32 || c == 127) return;
-            if (_hookedKeyboard != null && _hookedKeyboard.ctrlKey.isPressed) return;
+            // Ctrl+буква — сочетание, а не символ. AltGr в Windows приходит как Ctrl+Alt и набирает символы (@, €, {).
+            if (_hookedKeyboard != null && _hookedKeyboard.ctrlKey.isPressed && !_hookedKeyboard.altKey.isPressed) return;
             if (TypedPending.Count < 256) TypedPending.Add(c);
         }
 
