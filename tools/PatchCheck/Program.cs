@@ -147,7 +147,10 @@ internal static class Program
 
     private static string StripRef(TypeReference t) => t.FullName.TrimEnd('&');
 
-    /// <summary>AccessTools.FieldRefAccess&lt;T,F&gt;("поле") и AccessTools.Method(typeof(T), "метод").</summary>
+    /// <summary>
+    /// AccessTools.FieldRefAccess&lt;T,F&gt;("поле"), AccessTools.Field(typeof(T), "поле") и
+    /// AccessTools.Method(typeof(T), "метод"[, new[] { типы параметров }]).
+    /// </summary>
     private static int CheckReflectionCalls(TypeDefinition owner, MethodDefinition m)
     {
         int count = 0;
@@ -170,24 +173,46 @@ internal static class Program
                     Fail($"FieldRefAccess: {t.Name}.{field} имеет тип {fd.FieldType.FullName}, ожидается {gim.GenericArguments[1].FullName}");
                 else Console.WriteLine($"  ok  поле {t.Name}.{field}");
             }
-            else if (call.Name == "Method")
+            else if (call.Name == "Field" && call.Parameters.Count == 2)
             {
-                // ldtoken T; call GetTypeFromHandle; ldstr "name"; [массив типов параметров]; call Method
-                string name = null;
-                TypeReference typeRef = null;
-                int nameAt = -1;
-                for (int k = i - 1; k >= Math.Max(0, i - 16); k--)
-                    if (ins[k].OpCode == OpCodes.Ldstr) { name = (string)ins[k].Operand; nameAt = k; break; }
-                if (nameAt >= 0)
-                    for (int k = nameAt - 1; k >= Math.Max(0, nameAt - 3); k--)
-                        if (ins[k].OpCode == OpCodes.Ldtoken && ins[k].Operand is TypeReference tr) { typeRef = tr; break; }
+                // ldtoken T; call GetTypeFromHandle; ldstr "name"; call Field
+                string name = PrevString(ins, i);
+                var typeRef = PrevToken(ins, i - 1, 4);
                 if (name == null || typeRef == null) continue;
                 count++;
                 var t = FindGameType(typeRef.FullName);
+                if (t == null) { Fail($"Field: тип {typeRef.FullName} не найден"); continue; }
+                if (FindField(t, name) == null) Fail($"Field: поле {t.Name}.{name} не найдено");
+                else Console.WriteLine($"  ok  поле {t.Name}.{name}");
+            }
+            else if (call.Name == "Method")
+            {
+                // ldtoken T; call GetTypeFromHandle; ldstr "name"; [newarr Type; (ldtoken P; …; stelem.ref)*]; call Method
+                string name = null;
+                TypeReference typeRef = null;
+                int nameAt = -1;
+                for (int k = i - 1; k >= Math.Max(0, i - 40); k--)
+                    if (ins[k].OpCode == OpCodes.Ldstr) { name = (string)ins[k].Operand; nameAt = k; break; }
+                if (nameAt >= 0) typeRef = PrevToken(ins, nameAt, 3);
+                if (name == null || typeRef == null) continue;
+                // Типы параметров — ldtoken между именем и вызовом, если после имени создан массив.
+                List<string> sig = null;
+                for (int k = nameAt + 1; k < i; k++)
+                {
+                    if (ins[k].OpCode == OpCodes.Newarr && sig == null) sig = new List<string>();
+                    else if (sig != null && ins[k].OpCode == OpCodes.Ldtoken && ins[k].Operand is TypeReference pt) sig.Add(pt.FullName);
+                }
+                count++;
+                var t = FindGameType(typeRef.FullName);
                 if (t == null) { Fail($"Method: тип {typeRef.FullName} не найден"); continue; }
-                var md = FindMethod(t, name);
-                if (md == null) Fail($"Method: метод {t.Name}.{name} не найден");
-                else Console.WriteLine($"  ok  метод {t.Name}.{name}");
+                var overloads = FindMethods(t, name);
+                string label = sig == null ? $"{t.Name}.{name}" : $"{t.Name}.{name}({string.Join(", ", sig)})";
+                if (overloads.Count == 0) Fail($"Method: метод {label} не найден");
+                else if (sig != null && !HasOverload(t, name, sig))
+                    Fail($"Method: у {t.Name}.{name} нет перегрузки ({string.Join(", ", sig)})");
+                // Без типов AccessTools.Method при нескольких перегрузках бросает AmbiguousMatchException.
+                else if (sig == null && overloads.Count > 1) Fail($"Method: {label} — перегрузка неоднозначна, укажите типы параметров");
+                else Console.WriteLine($"  ok  метод {label}");
             }
         }
         return count;
@@ -200,6 +225,33 @@ internal static class Program
         return null;
     }
 
+    private static TypeReference PrevToken(Mono.Collections.Generic.Collection<Instruction> ins, int before, int depth)
+    {
+        for (int k = before - 1; k >= Math.Max(0, before - depth); k--)
+            if (ins[k].OpCode == OpCodes.Ldtoken && ins[k].Operand is TypeReference tr) return tr;
+        return null;
+    }
+
+    /// <summary>Перегрузки метода в ближайшем типе иерархии, где метод с таким именем объявлен (как ищет AccessTools).</summary>
+    private static List<MethodDefinition> FindMethods(TypeDefinition t, string name)
+    {
+        for (var cur = t; cur != null; cur = cur.BaseType?.Resolve())
+        {
+            var found = cur.Methods.Where(x => x.Name == name).ToList();
+            if (found.Count > 0) return found;
+        }
+        return new List<MethodDefinition>();
+    }
+
+    /// <summary>Перегрузка с этими типами параметров где-либо в иерархии (AccessTools идёт к базовым типам).</summary>
+    private static bool HasOverload(TypeDefinition t, string name, List<string> sig)
+    {
+        for (var cur = t; cur != null; cur = cur.BaseType?.Resolve())
+            if (cur.Methods.Any(x => x.Name == name && x.Parameters.Select(p => p.ParameterType.FullName).SequenceEqual(sig)))
+                return true;
+        return false;
+    }
+
     private static FieldDefinition FindField(TypeDefinition t, string name)
     {
         for (var cur = t; cur != null; cur = cur.BaseType?.Resolve())
@@ -210,13 +262,4 @@ internal static class Program
         return null;
     }
 
-    private static MethodDefinition FindMethod(TypeDefinition t, string name)
-    {
-        for (var cur = t; cur != null; cur = cur.BaseType?.Resolve())
-        {
-            var f = cur.Methods.FirstOrDefault(x => x.Name == name);
-            if (f != null) return f;
-        }
-        return null;
-    }
 }
