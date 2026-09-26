@@ -40,6 +40,7 @@ namespace ValheimArena
             ["Рядом арена игрока {0} — вы гость"] = "{0}'s arena is nearby, and you are its guest",
             [" и можете управлять боем."] = " and can control the fight.",
             ["Боец без владельца (вне активной зоны игроков): {0} — управление взял сервер."] = "Fighter without an owner (outside the players' active zones): the server took control of {0}.",
+            ["Боец с нулевым здоровьем не погиб, смерть запущена принудительно: {0}"] = "A fighter with zero health did not die; death was triggered: {0}",
             ["этот клиент"] = "this client",
             ["другой клиент (владелец "] = "another client (owner ",
             ["Вне границы: {0} — {1:0.#} м за кольцом арены "] = "Outside the border: {0} is {1:0.#} m beyond the ring of the arena hosted by ",

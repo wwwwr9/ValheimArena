@@ -634,6 +634,7 @@ namespace ValheimArena.Core
                     u.Refresh();
                     // Замороженному ИИ не копить «время мира»: после паузы он разом вылечился бы за всё время.
                     if (u.IsOwner && ShouldFreeze(u)) u.NView.GetZDO().Set(ZDOVars.s_worldTimeHash, ZNet.instance.GetTime().Ticks);
+                    EnsureDeath(u);
                     var us = u.Session;
                     if (us != null && us.Live && u.Alive) ArenaFlight.EnsureAirborne(u, 1f);
                     if (u.AlertPending)
@@ -778,6 +779,23 @@ namespace ValheimArena.Core
                 if (u.Adopted == ArenaUnit.Intruder) u.Release();
                 else Despawn(u);
             }
+        }
+
+        private static readonly System.Reflection.MethodInfo CheckDeathMethod =
+            HarmonyLib.AccessTools.Method(typeof(Character), "CheckDeath");
+
+        /// <summary>
+        /// Существо с нулевым здоровьем, которое не умерло, игра больше не ранит (RPC_Damage выходит при HP ≤ 0):
+        /// оно стоит бессмертным. Смерть проверяет владелец каждый физический такт; если этого не произошло,
+        /// владелец бойца запускает ту же проверку сам и пишет в лог, кто это был.
+        /// </summary>
+        private static void EnsureDeath(ArenaUnit u)
+        {
+            var ch = u.Character;
+            if (!u.IsOwner || !ch || ch.IsDead() || ch.GetHealth() > 0f || CheckDeathMethod == null) return;
+            ArenaPlugin.Log.LogWarning(L.F("Боец с нулевым здоровьем не погиб, смерть запущена принудительно: {0}", Label(u)));
+            try { CheckDeathMethod.Invoke(ch, null); }
+            catch (Exception e) { ArenaPlugin.Log.LogWarning(e.GetBaseException().ToString()); }
         }
 
         private static readonly HashSet<string> OwnerlessLogged = new HashSet<string>();
