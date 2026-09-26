@@ -33,6 +33,8 @@ namespace ValheimArena.Core
         public bool dropLoot;
         public bool freezeBeforeStart = true;
         public bool freezeAfterFinish;
+        /// <summary>Отсчёт перед боем, с (ведёт хозяин; гостю — для показа правил).</summary>
+        public float countdown = 3f;
 
         /// <summary>Гости могут начинать/останавливать бой, очищать арену и выпускать своих бойцов.</summary>
         public bool allowGuests = true;
@@ -61,6 +63,7 @@ namespace ValheimArena.Core
                 dropLoot = s.dropLoot,
                 freezeBeforeStart = s.freezeBeforeStart,
                 freezeAfterFinish = s.freezeAfterFinish,
+                countdown = s.countdown,
                 allowGuests = s.allowGuests,
             };
         }
@@ -88,6 +91,7 @@ namespace ValheimArena.Core
             s.dropLoot = dropLoot;
             s.freezeBeforeStart = freezeBeforeStart;
             s.freezeAfterFinish = freezeAfterFinish;
+            s.countdown = countdown;
             s.allowGuests = allowGuests;
         }
 
@@ -121,9 +125,25 @@ namespace ValheimArena.Core
         public double countdownEnd;
         public double fightStart;
         public double fightEnd;
+        public double pauseStart;
         public string result = "";
+        public ResultInfo outcome;
         public int revision;
         public ArenaRules rules = new ArenaRules();
+    }
+
+    /// <summary>Итог боя по частям: текст из них каждый клиент собирает на своём языке.</summary>
+    [Serializable]
+    public class ResultInfo
+    {
+        public const int None = 0, Draw = 1, Win = 2;
+        public int kind;
+        /// <summary>Стороны-победители (<see cref="Hostility.SideOf(ArenaUnit)"/>).</summary>
+        public int[] sides = new int[0];
+        /// <summary>Подпись бойца для стороны «сам за себя», иначе пусто.</summary>
+        public string[] solo = new string[0];
+        public int alive;
+        public float seconds;
     }
 
     /// <summary>Строка статистики бойца (хозяин собирает, рассылает гостям).</summary>
@@ -151,6 +171,8 @@ namespace ValheimArena.Core
     public class StatsSummary
     {
         public string session = "";
+        /// <summary>Вся статистика (иначе — только изменившиеся строки).</summary>
+        public bool full = true;
         public List<UnitStat> units = new List<UnitStat>();
     }
 

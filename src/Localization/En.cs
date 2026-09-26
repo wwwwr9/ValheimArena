@@ -27,6 +27,7 @@ namespace ValheimArena
             ["продолжение"] = "resumed",
             ["очистка арены"] = "arena cleanup",
             ["Некому сражаться: нет враждующих сторон. Проверьте состав и вкладку «Столкновения»."] = "Nobody to fight: there are no hostile sides. Check the roster and the \"Hostility\" tab.",
+            ["Хозяин арены ({0}) не начал бой: у него нет враждующих сторон, или бойцы ещё не видны ему."] = "The arena host ({0}) did not start the fight: there are no hostile sides on their side, or the fighters are not visible to them yet.",
             ["В бой!"] = "Fight!",
             ["Арена очищена: "] = "Arena cleared: ",
             ["Арена игрока {0} свёрнута."] = "{0}'s arena has been closed.",

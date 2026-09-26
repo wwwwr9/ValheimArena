@@ -45,6 +45,17 @@ namespace ValheimArena.Core
         private static float _tickSecond, _tickHalf, _heartbeat, _statsBroadcast, _orphanTick;
         private static string _lastRulesJson = "";
 
+        /// <summary>Арены другой версии мода: id → когда о ней последний раз были вести.</summary>
+        private static readonly Dictionary<string, float> ForeignSessions = new Dictionary<string, float>();
+
+        /// <summary>Хозяин: гость попросил начать бой, а его бойцы здесь, возможно, ещё не появились — пробуем до этого времени.</summary>
+        private static float _guestStartUntil;
+        private static string _guestStartWho = "";
+
+        /// <summary>Гость: когда отправлена команда «старт» и в какой арене — если бой так и не начался, сказать об этом.</summary>
+        private static float _startSentAt = -1f;
+        private static string _startSession = "";
+
         private static readonly Dictionary<string, Dictionary<string, float>> PendingDealt = new Dictionary<string, Dictionary<string, float>>();
         private static readonly Dictionary<string, Dictionary<string, float>> PendingTaken = new Dictionary<string, Dictionary<string, float>>();
 
@@ -164,7 +175,15 @@ namespace ValheimArena.Core
             if (s == null) return;
             if (s.IsLocal) ExecuteHostCommand(cmd, LocalPlayerName, false);
             else if (!s.Rules.allowGuests) Message(L.T("Хозяин арены (") + s.HostName + L.T(") не разрешил гостям управлять боем."));
-            else ArenaNet.SendCommand(s, cmd, LocalPlayerName);
+            else
+            {
+                ArenaNet.SendCommand(s, cmd, LocalPlayerName);
+                if (cmd == "start" && (s.State == ArenaState.Preparing || s.State == ArenaState.Finished))
+                {
+                    _startSentAt = Time.unscaledTime;
+                    _startSession = s.Id;
+                }
+            }
         }
 
         /// <summary>Команда на клиенте хозяина: своя или присланная гостем.</summary>
@@ -185,13 +204,19 @@ namespace ValheimArena.Core
             switch (cmd)
             {
                 case "start":
-                    HostStart();
+                    // Бойцы, которых гость выпустил только что, могут быть ещё не видны здесь — отказ не сразу.
+                    if (!HostStart(quiet: fromGuest) && fromGuest)
+                    {
+                        _guestStartUntil = Time.unscaledTime + 5f;
+                        _guestStartWho = who ?? "";
+                        return;
+                    }
                     break;
                 case "pause":
-                    if (s.State == ArenaState.Fighting) { s.State = ArenaState.Paused; ChangedLocal(); }
+                    if (s.State == ArenaState.Fighting) { SetPaused(s, true); ChangedLocal(); }
                     break;
                 case "resume":
-                    if (s.State == ArenaState.Paused) { s.State = ArenaState.Fighting; ChangedLocal(); }
+                    if (s.State == ArenaState.Paused) { SetPaused(s, false); ChangedLocal(); }
                     break;
                 case "clear":
                     HostClear(what);
@@ -214,17 +239,20 @@ namespace ValheimArena.Core
             }
         }
 
-        private static void HostStart()
+        /// <summary>Старт (или продолжение) боя. false — сражаться некому; <paramref name="quiet"/> — не сообщать об этом.</summary>
+        private static bool HostStart(bool quiet = false)
         {
             var s = Local;
-            if (s.State == ArenaState.Paused) { s.State = ArenaState.Fighting; ChangedLocal(); return; }
-            if (s.State == ArenaState.Fighting || s.State == ArenaState.Countdown) return;
+            _guestStartUntil = 0f;
+            if (s.State == ArenaState.Paused) { SetPaused(s, false); ChangedLocal(); return true; }
+            if (s.State == ArenaState.Fighting || s.State == ArenaState.Countdown) return true;
             if (!HasHostilePair(SessionUnits(s, true)))
             {
-                Message(L.T("Некому сражаться: нет враждующих сторон. Проверьте состав и вкладку «Столкновения»."));
-                return;
+                if (!quiet) Message(L.T("Некому сражаться: нет враждующих сторон. Проверьте состав и вкладку «Столкновения»."));
+                return false;
             }
             s.Result = "";
+            s.Outcome = null;
             if (S.countdown > 0.05f)
             {
                 s.State = ArenaState.Countdown;
@@ -232,6 +260,49 @@ namespace ValheimArena.Core
                 ChangedLocal();
             }
             else BeginFighting(s);
+            return true;
+        }
+
+        /// <summary>Пауза и продолжение: время на паузе в длительность боя не входит.</summary>
+        private static void SetPaused(ArenaSession s, bool paused)
+        {
+            if (paused)
+            {
+                s.State = ArenaState.Paused;
+                s.PauseStart = ArenaSession.Now;
+            }
+            else
+            {
+                if (s.PauseStart > s.FightStart) s.FightStart += ArenaSession.Now - s.PauseStart;
+                s.State = ArenaState.Fighting;
+            }
+        }
+
+        /// <summary>Хозяин: повторить отложенный старт гостя; не вышло за 5 с — сказать, почему боя нет.</summary>
+        private static void RetryGuestStart()
+        {
+            if (_guestStartUntil <= 0f) return;
+            var s = Local;
+            if (s == null || (s.State != ArenaState.Preparing && s.State != ArenaState.Finished)) { _guestStartUntil = 0f; return; }
+            float until = _guestStartUntil;
+            if (HostStart(quiet: true))
+            {
+                Message($"{_guestStartWho}: {CommandName("start")}");
+                return;
+            }
+            if (Time.unscaledTime < until) { _guestStartUntil = until; return; }
+            _guestStartUntil = 0f;
+            Message(_guestStartWho + ": " + L.T("Некому сражаться: нет враждующих сторон. Проверьте состав и вкладку «Столкновения»."));
+        }
+
+        /// <summary>Гость: бой по его команде так и не начался — у хозяина некому сражаться (или команда не дошла).</summary>
+        private static void WatchGuestStart()
+        {
+            if (_startSentAt < 0f || Time.unscaledTime - _startSentAt < 8f) return;
+            _startSentAt = -1f;
+            var s = FindSession(_startSession);
+            if (s == null || s.IsLocal || (s.State != ArenaState.Preparing && s.State != ArenaState.Finished)) return;
+            Message(L.F("Хозяин арены ({0}) не начал бой: у него нет враждующих сторон, или бойцы ещё не видны ему.", s.HostName));
         }
 
         private static void BeginFighting(ArenaSession s)
@@ -340,16 +411,15 @@ namespace ValheimArena.Core
         {
             if (Local == null) return;
             ArenaNet.SendState(Local);
-            if (Local.Stats.Count > 0) ArenaNet.SendStats(Local);
+            ArenaNet.SendStats(Local, full: true);
         }
 
         public static void OnDamageReport(string sessionId, Dictionary<string, float> dealt, Dictionary<string, float> taken)
         {
             var s = Local;
             if (s == null || s.Id != sessionId) return;
-            foreach (var kv in dealt) { var st = s.Stat(kv.Key); if (st != null) st.dealt += kv.Value; }
-            foreach (var kv in taken) { var st = s.Stat(kv.Key); if (st != null) st.taken += kv.Value; }
-            s.StatsDirty = true;
+            foreach (var kv in dealt) { var st = s.Stat(kv.Key); if (st != null) { st.dealt += kv.Value; s.MarkDirty(st.key); } }
+            foreach (var kv in taken) { var st = s.Stat(kv.Key); if (st != null) { st.taken += kv.Value; s.MarkDirty(st.key); } }
         }
 
         public static void OnKill(KillEvent e)
@@ -373,9 +443,13 @@ namespace ValheimArena.Core
                 v.alive = false;
                 v.killedBy = e.killer;
                 v.deathTime = ArenaSession.Now;
-                if (!string.IsNullOrEmpty(e.killerKey)) s.Stat(e.killerKey).kills++;
+                if (!string.IsNullOrEmpty(e.killerKey))
+                {
+                    s.Stat(e.killerKey).kills++;
+                    s.MarkDirty(e.killerKey);
+                }
             }
-            s.StatsDirty = true;
+            s.MarkDirty(v.key);
             s.RebuildSides();
         }
 
@@ -383,7 +457,7 @@ namespace ValheimArena.Core
         {
             var s = FindSession(sum.session);
             if (s == null || s.IsLocal) return;
-            s.ReplaceStats(sum.units);
+            s.ApplyStats(sum.units, sum.full);
         }
 
         // ================================================================== спавн
@@ -645,6 +719,9 @@ namespace ValheimArena.Core
                     }
                 }
                 ClaimOwnerless();
+                RetryGuestStart();
+                WatchGuestStart();
+                PruneSessions();
                 HandleIntruders();
                 WatchEscapes();
                 ForceTargets();
@@ -679,7 +756,7 @@ namespace ValheimArena.Core
                 if (Local != null && Local.StatsDirty && HasPeers)
                 {
                     Local.StatsDirty = false;
-                    ArenaNet.SendStats(Local);
+                    ArenaNet.SendStats(Local, Local.StatsFull);
                 }
             }
 
@@ -715,6 +792,9 @@ namespace ValheimArena.Core
             Current = null;
             PendingDealt.Clear();
             PendingTaken.Clear();
+            ForeignSessions.Clear();
+            _guestStartUntil = 0f;
+            _startSentAt = -1f;
             TimeScale = 1f;
             _worldEnterTime = Time.unscaledTime;
             Bump();
@@ -754,6 +834,36 @@ namespace ValheimArena.Core
             return best;
         }
 
+        /// <summary>Пришло состояние арены другой версии мода (протокол не совпал).</summary>
+        public static void NoteForeignSession(string id)
+        {
+            if (!string.IsNullOrEmpty(id)) ForeignSessions[id] = Time.unscaledTime;
+        }
+
+        private static bool ForeignAlive(string id) =>
+            !string.IsNullOrEmpty(id) && ForeignSessions.TryGetValue(id, out var t) && Time.unscaledTime - t < ArenaSession.StaleSeconds;
+
+        /// <summary>
+        /// Чужие арены, о которых нет вестей 10 минут (хозяин вышел, не свернув арену), забываются. Их бойцов это
+        /// не меняет: арена без вестей и забытая арена для них одинаково «исчезли».
+        /// </summary>
+        private static void PruneSessions()
+        {
+            List<string> gone = null;
+            float now = Time.unscaledTime;
+            foreach (var kv in Sessions)
+                if (!kv.Value.IsLocal && kv.Value != Current && now - kv.Value.LastHeard > 600f) (gone = gone ?? new List<string>()).Add(kv.Key);
+            foreach (var kv in ForeignSessions)
+                if (now - kv.Value > 600f) (gone = gone ?? new List<string>()).Add(kv.Key);
+            if (gone == null) return;
+            foreach (var id in gone)
+            {
+                Sessions.Remove(id);
+                ForeignSessions.Remove(id);
+            }
+            Bump();
+        }
+
         /// <summary>
         /// Бойцы, чья арена исчезла. Свою старую арену убираем сразу; чужую — только если о ней нет вестей
         /// дольше 30 с и мы в мире не меньше 30 с (иначе удалили бы бойцов арены, чьё состояние ещё не пришло).
@@ -766,7 +876,7 @@ namespace ValheimArena.Core
             {
                 if (!u || !u.IsOwner) continue;
                 var s = u.Session;
-                if (s != null && s.Live)
+                if ((s != null && s.Live) || ForeignAlive(u.SessionId))
                 {
                     u.OrphanSince = -1f;
                     continue;
@@ -974,44 +1084,45 @@ namespace ValheimArena.Core
         private static void CheckFinish()
         {
             var s = Local;
+            // Арена вне зоны, которую игра обновляет вокруг хозяина: бойцов там у него нет, и итог был бы ложным
+            // («ничья» при живых бойцах). Итог подождёт, пока хозяин не вернётся к арене.
+            if (ZNet.instance && !ZNetScene.InActiveArea(s.Center, ZNet.instance.GetReferencePosition())) return;
             var alive = SessionUnits(s, true);
             if (HasHostilePair(alive)) return;
 
-            s.State = ArenaState.Finished;
-            s.FightEnd = ArenaSession.Now;
-            string text;
-            if (alive.Count == 0)
+            var outcome = new ResultInfo { kind = alive.Count == 0 ? ResultInfo.Draw : ResultInfo.Win, alive = alive.Count, seconds = s.FightSeconds };
+            if (alive.Count > 0)
             {
-                text = L.T("Ничья: не выжил никто.");
-            }
-            else
-            {
-                var names = new List<string>();
-                var seen = new HashSet<int>();
+                var sides = new List<int>();
+                var solo = new List<string>();
                 foreach (var u in alive)
                 {
                     int side = Hostility.SideOf(u);
-                    if (seen.Add(side)) names.Add(Hostility.SideName(side, Label(u)));
+                    if (sides.Contains(side)) continue;
+                    sides.Add(side);
+                    solo.Add(side >= Hostility.SoloSides ? Label(u) : "");
                 }
-                text = (names.Count == 1 ? L.T("Победа: ") : L.T("Победители: ")) + string.Join(", ", names) + L.F(" — выжило {0}.", alive.Count);
+                outcome.sides = sides.ToArray();
+                outcome.solo = solo.ToArray();
             }
-            text += L.F(" Бой длился {0:0} с.", s.FightSeconds);
-            s.Result = text;
+            s.State = ArenaState.Finished;
+            s.FightEnd = ArenaSession.Now;
+            s.Outcome = outcome;
+            s.Result = s.ResultText;
             ChangedLocal();
-            s.StatsDirty = true;
-            Message(text);
+            Message(s.Result);
         }
 
         /// <summary>Хозяин: строки статистики по видимым бойцам (подписи, стороны, живы ли).</summary>
         private static void HostRefreshStats()
         {
             var s = Local;
-            bool changed = false;
             foreach (var u in SessionUnits(s, false))
             {
                 var st = s.Stat(u.Key);
                 string label = Label(u);
                 int faction = (int)u.Character.GetFaction();
+                bool changed = false;
                 if (st.label != label || st.team != u.Team || st.faction != faction)
                 {
                     st.label = label;
@@ -1022,18 +1133,15 @@ namespace ValheimArena.Core
                 }
                 if (FillSide(s, st, label)) changed = true;
                 if (u.Alive && !st.alive && st.deathTime <= 0) { st.alive = true; changed = true; }
+                if (changed) s.MarkDirty(st.key);
             }
-            if (changed) s.StatsDirty = true;
             s.RebuildSides();
         }
 
         private static bool FillSide(ArenaSession s, UnitStat st, string label)
         {
             var mode = (HostilityMode)s.Rules.hostilityMode;
-            int serial = 0;
-            int hash = st.key.LastIndexOf(':');
-            if (hash >= 0) int.TryParse(st.key.Substring(hash + 1), out serial);
-            int side = Hostility.SideOf(mode, st.team, st.faction, serial % 10000);
+            int side = Hostility.SideOf(mode, st.team, st.faction, st.key);
             if (side == st.side && !string.IsNullOrEmpty(st.sideName)) return false;
             st.side = side;
             st.sideName = Hostility.SideName(side, label);
@@ -1097,7 +1205,7 @@ namespace ValheimArena.Core
             if (k) { killerName = Label(k); killerColor = Hostility.UnitColor(k); }
             else if (killer && killer.IsPlayer()) { killerName = ((Player)killer).GetPlayerName(); killerColor = Color.white; }
             else if (killer) { killerName = ProfileLogic.Loc(killer.m_name); killerColor = Color.gray; }
-            else { killerName = L.T("стихия"); killerColor = Color.gray; }
+            else { killerName = ""; killerColor = Color.gray; }   // «стихия» — на языке получателя
             ArenaNet.SendKill(new KillEvent
             {
                 session = v.SessionId,

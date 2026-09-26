@@ -14,12 +14,12 @@ namespace ValheimArena.Core
     ///   VA_Clear  хозяин → все   убрать бойцов арены, которыми владеешь
     ///   VA_Dmg    владелец пострадавшего → хозяин   нанесённый/полученный урон за секунду
     ///   VA_Kill   владелец погибшего → все          гибель бойца (лента, итоги)
-    ///   VA_Stats  хозяин → все   сводная статистика для итогов у гостей
+    ///   VA_Stats  хозяин → все   статистика для итогов у гостей: вся или изменившиеся строки
     /// </summary>
     public static class ArenaNet
     {
         /// <summary>Версия протокола: клиенты с другой версией состояние чужой арены не принимают.</summary>
-        public const int Protocol = 6;
+        public const int Protocol = 7;
 
         private const string RState = "VA_State";
         private const string RHello = "VA_Hello";
@@ -128,9 +128,27 @@ namespace ValheimArena.Core
 
         public static void SendKill(KillEvent e) => Send(ZRoutedRpc.Everybody, RKill, Json(e));
 
-        public static void SendStats(ArenaSession s)
+        /// <summary>
+        /// Статистика гостям: вся (<paramref name="full"/>) или строки, изменившиеся с прошлой рассылки. Строки без
+        /// подписи (урон по бойцу, которого хозяин ещё не видел, или запоздавший после очистки) не отправляются:
+        /// подпись появится — строка изменится и уйдёт целиком.
+        /// </summary>
+        public static void SendStats(ArenaSession s, bool full)
         {
-            var sum = new StatsSummary { session = s.Id, units = new List<UnitStat>(s.Stats.Values) };
+            var sum = new StatsSummary { session = s.Id, full = full };
+            if (full)
+            {
+                foreach (var st in s.Stats.Values)
+                    if (!string.IsNullOrEmpty(st.label)) sum.units.Add(st);
+            }
+            else
+            {
+                foreach (var key in s.DirtyStats)
+                    if (s.Stats.TryGetValue(key, out var st) && !string.IsNullOrEmpty(st.label)) sum.units.Add(st);
+            }
+            s.DirtyStats.Clear();
+            if (full) s.StatsFull = false;
+            if (!full && sum.units.Count == 0) return;
             Send(ZRoutedRpc.Everybody, RStats, Json(sum));
         }
 
@@ -142,6 +160,8 @@ namespace ValheimArena.Core
             if (st == null) return;
             if (st.protocol != Protocol)
             {
+                // Бойцов такой арены этот клиент не понимает, но и не удаляет как бойцов исчезнувшей арены.
+                Arena.NoteForeignSession(st.id);
                 if (!_warnedProtocol)
                 {
                     _warnedProtocol = true;
