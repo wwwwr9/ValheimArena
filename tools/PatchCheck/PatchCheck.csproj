@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <ValheimDir Condition="'$(ValheimDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Valheim</ValheimDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Mono.Cecil из поставки BepInEx: чтение метаданных без загрузки сборок игры. -->
+    <Reference Include="Mono.Cecil"><HintPath>$(ValheimDir)\BepInEx\core\Mono.Cecil.dll</HintPath><Private>true</Private></Reference>
+  </ItemGroup>
+
+</Project>
