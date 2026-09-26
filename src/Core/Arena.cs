@@ -1159,7 +1159,8 @@ namespace ValheimArena.Core
 
         public static void Message(string text)
         {
-            if (MessageHud.instance) MessageHud.instance.ShowMessage(MessageHud.MessageType.TopLeft, text);
+            // Сообщения арены видны и при скрытом интерфейсе игры: они относятся к арене, а не к игре.
+            if (MessageHud.instance) MessageHud.instance.ShowMessage(MessageHud.MessageType.TopLeft, text, 0, null, showDespiteHiddenHUD: true);
             ArenaPlugin.Log.LogInfo(text);
         }
     }

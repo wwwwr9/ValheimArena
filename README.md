@@ -82,8 +82,9 @@ and they are remembered between sessions. Invisibility hides the character only 
 ### Overlay and results
 
 The overlay shows name tags in team or faction colors, health bars, side scores, a kill feed and a card for the
-followed target. F4 hides the name tags and F10 hides the entire overlay. The results list the sides with their
-damage and kills together with who killed whom.
+followed target. F4 hides the name tags and F10 hides the entire overlay, while F1 hides the game's own interface
+and leaves the arena overlay and windows on screen. The results list the sides with their damage and kills
+together with who killed whom.
 
 ### Creature editor (F8)
 
@@ -116,6 +117,7 @@ Keys can be changed in the config file.
 | `-` `=` | Slower or faster time, from a full stop up to ×3 (while an arena is deployed and no other player is in the world) |
 | F4 | Show or hide the name tags over fighters with name, stars and health bar |
 | F10 | Show or hide the whole arena overlay: name tags, side scores and kill feed |
+| F1 | Show or hide the game's own interface: HUD, minimap, bars over creatures, game messages, chat and key hints; the arena overlay and windows stay |
 
 The free camera moves with WASD, rises with Space or E and descends with Ctrl or Q; Shift triples its speed,
 Alt reduces it to ×0.3, and the mouse wheel sets the base speed. The follow camera orbits with the mouse and

@@ -187,6 +187,10 @@ namespace ValheimArena
             // UI/ArenaUI.cs
             ["Таблички над бойцами показаны"] = "Name tags shown",
             ["Таблички над бойцами скрыты"] = "Name tags hidden",
+
+            // UI/GameUi.cs
+            ["Интерфейс игры скрыт"] = "Game interface hidden",
+            ["Интерфейс игры показан"] = "Game interface shown",
             ["АРЕНА  ·  "] = "ARENA  ·  ",
             ["РЕДАКТОР СУЩЕСТВ"] = "CREATURE EDITOR",
 
@@ -338,7 +342,7 @@ namespace ValheimArena
             ["Водные"] = "Aquatic",
             ["{0} меню · {1} редактор · {2} камера · "] = "{0} menu · {1} editor · {2} camera · ",
             ["{0} бой/пауза · {1}/{2} цели · "] = "{0} fight/pause · {1}/{2} targets · ",
-            ["{0}/{1} время · {2} таблички · {3} оверлей · ПКМ — обзор при открытом меню"] = "{0}/{1} time · {2} name tags · {3} overlay · hold RMB to look around with the menu open",
+            ["{0}/{1} время · {2} таблички · {3} оверлей · {4} интерфейс игры · ПКМ — обзор при открытом меню"] = "{0}/{1} time · {2} name tags · {3} overlay · {4} game interface · hold RMB to look around with the menu open",
             ["Арена: "] = "Arena: ",
             ["  бойцов: {0}"] = "  fighters: {0}",
             ["  время: "] = "  time: ",
@@ -523,6 +527,8 @@ namespace ValheimArena
             ["Оверлей"] = "Overlay",
             ["Показывать оверлей арены ("] = "Show arena overlay (",
             ["Таблички над бойцами: имя, звёзды, здоровье ({0})"] = "Name tags over fighters: name, stars, health ({0})",
+            ["Скрыть интерфейс игры ({0})"] = "Hide the game's interface ({0})",
+            ["HUD, миникарта, полоски над существами, сообщения игры, чат и подсказки клавиш; оверлей и окна арены остаются."] = "HUD, minimap, bars over creatures, game messages, chat and key hints; the arena overlay and windows stay.",
             ["Полоски здоровья"] = "Health bars",
             ["Лента убийств"] = "Kill feed",
             ["Дальность табличек"] = "Name tag range",

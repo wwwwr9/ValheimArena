@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.4.0
+
+- F1 hides and shows the game's own interface: HUD, minimap, bars over creatures, game messages, chat and key
+  hints. The arena overlay, the arena's messages and the mod's windows stay on screen. The same option is in the
+  Camera tab, and the key can be changed in the config.
+- With Ctrl held, the mod's function keys no longer react, so the game's own Ctrl combinations work undisturbed.
+
+- F1 скрывает и показывает интерфейс самой игры: HUD, миникарту, полоски над существами, сообщения игры, чат
+  и подсказки клавиш. Оверлей арены, её сообщения и окна мода остаются на экране. Тот же флажок есть на вкладке
+  «Камера», а клавиша меняется в настройках.
+- При зажатом Ctrl функциональные клавиши мода больше не срабатывают, и сочетания самой игры с Ctrl работают
+  без помех.
+
 ## 1.3.1
 
 Fixes:

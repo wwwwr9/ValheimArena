@@ -14,7 +14,7 @@ namespace ValheimArena
     {
         public const string Guid = "valheimarena.arena";
         public const string ModName = "Valheim Arena";
-        public const string Version = "1.3.1";
+        public const string Version = "1.4.0";
 
         internal static ArenaPlugin Instance;
         internal static ManualLogSource Log;
@@ -33,6 +33,7 @@ namespace ValheimArena
         internal static ConfigEntry<KeyCode> KeyFaster;
         internal static ConfigEntry<KeyCode> KeyOverlay;
         internal static ConfigEntry<KeyCode> KeyTags;
+        internal static ConfigEntry<KeyCode> KeyGameUi;
         internal static ConfigEntry<float> UiScale;
         internal static ConfigEntry<float> MouseSensitivity;
 
@@ -93,6 +94,9 @@ namespace ValheimArena
             KeyFaster = Config.Bind("Keys", "Faster time", KeyCode.Equals, "Single player / own server without other players only. / Только без других игроков.");
             KeyOverlay = Config.Bind("Keys", "Overlay", KeyCode.F10, "Show/hide the whole arena overlay: name tags, scores, kill feed. / Показать/скрыть весь оверлей арены: таблички, счёт, ленту убийств.");
             KeyTags = Config.Bind("Keys", "Name tags", KeyCode.F4, "Show/hide the name tags over fighters: name, stars, health bar. / Показать/скрыть таблички над бойцами: имя, звёзды, полоска здоровья.");
+            KeyGameUi = Config.Bind("Keys", "Game interface", KeyCode.F1,
+                "Hide/show the game's own interface: HUD, minimap, bars over creatures, messages, chat and key hints; the arena overlay and windows stay. / " +
+                "Скрыть/показать интерфейс самой игры: HUD, миникарту, полоски над существами, сообщения, чат и подсказки клавиш; оверлей и окна арены остаются.");
             MouseSensitivity = Config.Bind("Camera", "Mouse sensitivity", 1f, new ConfigDescription(
                 "Mouse sensitivity multiplier for the free and follow cameras. / Множитель чувствительности мыши для свободной камеры и слежения.",
                 new AcceptableValueRange<float>(0.1f, 5f)));

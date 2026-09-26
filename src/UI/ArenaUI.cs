@@ -53,6 +53,7 @@ namespace ValheimArena.UI
                 return;
             }
             UpdateWindowDrag();
+            GameUi.Update();
             // Те же проверки набора текста, что у самой игры (PlayerController): консоль, чат, окно ввода,
             // подпись метки на карте, поиск в меню строительства.
             if (Console.IsVisible() || (Chat.instance && Chat.instance.HasFocus()) || TextInput.IsVisible() || Minimap.InTextInput()
@@ -82,6 +83,7 @@ namespace ValheimArena.UI
             if (Pressed(ArenaPlugin.KeyOverlay))
                 ArenaSettingsStore.Current.overlay = !ArenaSettingsStore.Current.overlay;
             if (Pressed(ArenaPlugin.KeyTags)) ToggleNameTags();
+            if (Pressed(ArenaPlugin.KeyGameUi)) GameUi.Toggle();
         }
 
         /// <summary>
@@ -95,12 +97,13 @@ namespace ValheimArena.UI
             if (s.nameTags) s.overlay = true;
             if (MessageHud.instance)
                 MessageHud.instance.ShowMessage(MessageHud.MessageType.TopLeft,
-                    s.nameTags ? L.T("Таблички над бойцами показаны") : L.T("Таблички над бойцами скрыты"));
+                    s.nameTags ? L.T("Таблички над бойцами показаны") : L.T("Таблички над бойцами скрыты"), 0, null, showDespiteHiddenHUD: true);
         }
 
         /// <summary>
         /// Клавиши-символы молчат, пока набирается текст в поле мода; F-клавиши работают всегда,
-        /// чтобы окно можно было закрыть тем же F7, не снимая фокус с поля.
+        /// чтобы окно можно было закрыть тем же F7, не снимая фокус с поля. С зажатым Ctrl F-клавиши мода молчат:
+        /// сочетания Ctrl+F1 и Ctrl+F3 заняты игрой.
         /// </summary>
         private static bool Pressed(BepInEx.Configuration.ConfigEntry<KeyCode> key)
         {
@@ -108,6 +111,7 @@ namespace ValheimArena.UI
             if (k == KeyCode.None) return false;
             bool fKey = k >= KeyCode.F1 && k <= KeyCode.F15;
             if (WantsKeyboard && !fKey) return false;
+            if (fKey && (ZInput.GetKey(KeyCode.LeftControl, false) || ZInput.GetKey(KeyCode.RightControl, false))) return false;
             return ZInput.GetKeyDown(k, false);
         }
 

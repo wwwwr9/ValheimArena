@@ -56,8 +56,8 @@ namespace ValheimArena.UI
 
             GUILayout.Label(L.F("{0} меню · {1} редактор · {2} камера · ", ArenaPlugin.KeyMenu.Value, ArenaPlugin.KeyEditor.Value, ArenaPlugin.KeyCamera.Value) +
                             L.F("{0} бой/пауза · {1}/{2} цели · ", ArenaPlugin.KeyFight.Value, ArenaPlugin.KeyPrevTarget.Value, ArenaPlugin.KeyNextTarget.Value) +
-                            L.F("{0}/{1} время · {2} таблички · {3} оверлей · ПКМ — обзор при открытом меню", ArenaPlugin.KeySlower.Value,
-                                ArenaPlugin.KeyFaster.Value, ArenaPlugin.KeyTags.Value, ArenaPlugin.KeyOverlay.Value), GuiKit.Muted);
+                            L.F("{0}/{1} время · {2} таблички · {3} оверлей · {4} интерфейс игры · ПКМ — обзор при открытом меню", ArenaPlugin.KeySlower.Value,
+                                ArenaPlugin.KeyFaster.Value, ArenaPlugin.KeyTags.Value, ArenaPlugin.KeyOverlay.Value, ArenaPlugin.KeyGameUi.Value), GuiKit.Muted);
         }
 
         /// <summary>Язык интерфейса: EN / RU / как в игре. Выбор сохраняется в cfg (Interface → Language).</summary>
@@ -706,6 +706,10 @@ namespace ValheimArena.UI
             GUILayout.Label(L.T("Оверлей"), GuiKit.SubHeader);
             S.overlay = GuiKit.Toggle(L.T("Показывать оверлей арены (") + ArenaPlugin.KeyOverlay.Value + ")", S.overlay);
             S.nameTags = GuiKit.Toggle(L.F("Таблички над бойцами: имя, звёзды, здоровье ({0})", ArenaPlugin.KeyTags.Value), S.nameTags);
+            // Состояние интерфейса игры живёт в самой игре (Hud.m_userHidden), поэтому флажок читает и пишет его напрямую.
+            bool hideGame = GuiKit.Toggle(L.F("Скрыть интерфейс игры ({0})", ArenaPlugin.KeyGameUi.Value), GameUi.Hidden,
+                L.T("HUD, миникарта, полоски над существами, сообщения игры, чат и подсказки клавиш; оверлей и окна арены остаются."));
+            if (hideGame != GameUi.Hidden) GameUi.SetHidden(hideGame);
             S.hpBars = GuiKit.Toggle(L.T("Полоски здоровья"), S.hpBars);
             S.killFeed = GuiKit.Toggle(L.T("Лента убийств"), S.killFeed);
             S.tagDistance = GuiKit.Slider(L.T("Дальность табличек"), S.tagDistance, 20f, 250f, "tagdist", "0", suffix: L.T("м"));

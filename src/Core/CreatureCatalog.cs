@@ -26,7 +26,7 @@ namespace ValheimArena.Core
     }
 
     /// <summary>Все существа игры (и модов), которых можно выпустить на арену: префабы ZNetScene с Character и ИИ.</summary>
-    public static class CreatureCatalog
+    public static partial class CreatureCatalog
     {
         private static readonly List<CreatureEntry> Entries = new List<CreatureEntry>();
         private static readonly Dictionary<string, CreatureEntry> ByPrefab = new Dictionary<string, CreatureEntry>();
@@ -103,7 +103,11 @@ namespace ValheimArena.Core
             foreach (var e in Entries)
                 if (!Factions.Contains(e.Faction)) Factions.Add(e.Faction);
             Factions.Sort();
+            CatalogBuilt(Entries);
         }
+
+        /// <summary>Точка расширения для локальных инструментов; без реализации вызов удаляется компилятором.</summary>
+        static partial void CatalogBuilt(List<CreatureEntry> entries);
 
         /// <summary>Фракции, которые есть в каталоге, по порядку перечисления игры.</summary>
         public static IReadOnlyList<Character.Faction> PresentFactions
