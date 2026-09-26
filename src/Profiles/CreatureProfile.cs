@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ValheimArena.Profiles
 {
-    /// <summary>Набор урона по типам (зеркало HitData.DamageTypes, пригодное для JsonUtility).</summary>
+    /// <summary>Набор урона по типам (зеркало HitData.DamageTypes, пригодное для сериализации в JSON).</summary>
     [Serializable]
     public class DamageSet
     {

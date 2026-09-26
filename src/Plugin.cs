@@ -83,10 +83,8 @@ namespace ValheimArena
                 new AcceptableValueRange<float>(0.5f, 2.5f)));
             KeyMenu = Config.Bind("Keys", "Arena menu", KeyCode.F7, "Open/close the arena menu. / Открыть/закрыть меню арены.");
             KeyEditor = Config.Bind("Keys", "Creature editor", KeyCode.F8, "Open/close the creature editor. / Открыть/закрыть редактор существ.");
-            KeyCamera = Config.Bind("Keys", "Camera mode", KeyCode.F3,
-                "Player camera → free → follow. Not F9: the game uses it to switch the gamepad layout. / " +
-                "Камера игрока → свободная → слежение. Не F9: ею игра переключает раскладку геймпада.");
-            // До 1.3.1 по умолчанию стояла F9 — она же у игры меняет и сохраняет раскладку геймпада.
+            KeyCamera = Config.Bind("Keys", "Camera mode", KeyCode.F3, "Player camera → free → follow. / Камера игрока → свободная → слежение.");
+            // F9, клавиша камеры до 1.3.1, в игре переключает раскладку геймпада: сохранённое значение переносится на F3.
             if (KeyCamera.Value == KeyCode.F9) KeyCamera.Value = KeyCode.F3;
             KeyFight = Config.Bind("Keys", "Start or pause fight", KeyCode.F6, "Deploy the arena, start, pause or resume the fight. / Развернуть арену, начать бой, пауза, продолжить.");
             KeyNextTarget = Config.Bind("Keys", "Next target", KeyCode.RightBracket, "Follow camera: next fighter. / Слежение: следующий боец.");

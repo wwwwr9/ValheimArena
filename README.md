@@ -110,7 +110,7 @@ Keys can be changed in the config file.
 |---|---|
 | F7 | Arena menu |
 | F8 | Creature editor |
-| F3 | Camera: player, free, follow. F9 is not used because the game switches the gamepad layout with it |
+| F3 | Camera: player, free, follow |
 | F6 | Deploy the arena if none is deployed; otherwise start, pause or resume the fight |
 | `[` `]` | Previous or next fighter to follow (while an arena is deployed) |
 | `-` `=` | Slower or faster time, from a full stop up to ×3 (while an arena is deployed and no other player is in the world) |

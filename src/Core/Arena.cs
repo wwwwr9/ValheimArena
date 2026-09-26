@@ -84,7 +84,7 @@ namespace ValheimArena.Core
                 Rules = ArenaRules.From(S),
                 Revision = 1
             };
-            _lastRulesJson = JsonUtility.ToJson(Local.Rules);
+            _lastRulesJson = JsonIO.ToJson(Local.Rules);
             Sessions[Local.Id] = Local;
             Bump();
             Current = Local;
@@ -727,7 +727,7 @@ namespace ValheimArena.Core
         {
             if (Local == null) return;
             var r = ArenaRules.From(S);
-            var json = JsonUtility.ToJson(r);
+            var json = JsonIO.ToJson(r);
             if (json == _lastRulesJson) return;
             _lastRulesJson = json;
             Local.Rules = r;
