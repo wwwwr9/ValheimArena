@@ -2,16 +2,8 @@ using UnityEngine;
 
 namespace ValheimArena.Core
 {
-    /// <summary>
-    /// Полёт бойцов арены. В игре летун в погоне идёт к точке цели, поднятой лишь до m_flyAltitudeMin над землёй,
-    /// а зависает там, где «видит» цель в радиусе атаки. На арене цель есть и видна всегда — и летуны висят у земли,
-    /// а атаки, разрешённые только с высоты (m_aiWhenFlyingAltitudeMin), не срабатывают вовсе.
-    /// Здесь точка движения поднимается: подлёт — на крейсерской высоте, у цели — на высоте, с которой достаёт
-    /// текущая атака (стрелки держат высоту, кусачие пикируют).
-    /// </summary>
     public static class ArenaFlight
     {
-        /// <summary>Крейсерская высота над землёй: из правил арены или по самому существу и его атакам.</summary>
         public static float Cruise(ArenaUnit u)
         {
             var r = u.Rules;
@@ -26,7 +18,6 @@ namespace ValheimArena.Core
                 float min = ai ? ai.m_flyAltitudeMin : 3f;
                 float max = ai ? Mathf.Min(ai.m_flyAltitudeMax, 40f) : 10f;
                 cruise = Mathf.Clamp(Mathf.Max(min + 3f, (min + max) * 0.5f), 4f, 15f);
-                // Атака, которую можно применять только с высоты, должна быть доступна с крейсерской высоты.
                 if (u.Character is Humanoid h)
                 {
                     var inv = h.GetInventory();
@@ -44,7 +35,6 @@ namespace ValheimArena.Core
             return Mathf.Max(1.5f, cruise);
         }
 
-        /// <summary>Высота поверхности под точкой: суша или вода (летуны над морем не ныряют).</summary>
         public static float Surface(Vector3 p)
         {
             var zs = ZoneSystem.instance;
@@ -53,7 +43,6 @@ namespace ValheimArena.Core
             return Mathf.Max(ground, zs.m_waterLevel);
         }
 
-        /// <summary>Поднять точку движения летуна в режиме «идёт к врагам».</summary>
         public static Vector3 AdjustMoveTarget(ArenaUnit u, Vector3 point)
         {
             float cruise = Cruise(u);
@@ -71,7 +60,6 @@ namespace ValheimArena.Core
             Vector3 pos = u.transform.position;
             float dxz = Utils.DistanceXZ(point, pos);
             float reach = range * 0.85f;
-            // Далеко — крейсерская высота; в радиусе атаки — не выше, чем атака достаёт (3D-дистанция).
             float want = dxz > reach ? cruise : Mathf.Min(cruise, Mathf.Sqrt(Mathf.Max(0f, reach * reach - dxz * dxz)));
             want = Mathf.Max(want, needAlt + 0.5f);
             want = Mathf.Min(want, maxAlt - 0.5f);
@@ -80,7 +68,6 @@ namespace ValheimArena.Core
             return point;
         }
 
-        /// <summary>«Стоит на месте» для летуна: висеть на крейсерской высоте над точкой, где стоит.</summary>
         public static Vector3 HoldMoveDir(ArenaUnit u)
         {
             Vector3 pos = u.transform.position;
@@ -89,17 +76,12 @@ namespace ValheimArena.Core
             return Mathf.Abs(dy) < 0.05f ? Vector3.zero : new Vector3(0f, dy, 0f);
         }
 
-        /// <summary>Высота появления летуна: не у самой земли.</summary>
         public static float SpawnAltitude(GameObject prefab)
         {
             var ai = prefab ? prefab.GetComponent<BaseAI>() : null;
             return ai ? Mathf.Clamp(ai.m_flyAltitudeMin + 2f, 3f, 10f) : 3f;
         }
 
-        /// <summary>
-        /// Всегда летающий по прототипу боец (без случайных посадок), приземлившийся и не атакующий дольше 4 с —
-        /// поднимаем. Существа со своим циклом взлёт/посадка (m_randomFly) не трогаем: у них это часть поведения.
-        /// </summary>
         public static void EnsureAirborne(ArenaUnit u, float dt)
         {
             if (!u.PrefabFlies || !u.IsOwner || !u.AI || u.AI.m_randomFly) { u.GroundedFor = 0f; return; }

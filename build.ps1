@@ -1,9 +1,3 @@
-<#
-  Builds Valheim Arena.
-    .\build.ps1                                  - Release build and Harmony patch check against the installed game
-    .\build.ps1 -Deploy                          - the same, then copy the plugin to BepInEx\plugins\ValheimArena
-    .\build.ps1 -ValheimDir "D:\Games\Valheim"   - game installed in another folder
-#>
 param(
     [string]$ValheimDir = 'C:\Program Files (x86)\Steam\steamapps\common\Valheim',
     [switch]$Deploy,

@@ -25,13 +25,8 @@ namespace ValheimArena.Core
         public float Damage;
     }
 
-    /// <summary>
-    /// Одна арена в мире. Своя (IsLocal) — её ведёт этот клиент; чужая — копия состояния, присланного хозяином.
-    /// Геометрия, правила и статистика — здесь; сетевой обмен — в <see cref="ArenaNet"/>, общая логика — в <see cref="Arena"/>.
-    /// </summary>
     public class ArenaSession
     {
-        /// <summary>Сколько секунд без вестей от хозяина арена считается живой.</summary>
         public const float StaleSeconds = 15f;
 
         public string Id = "";
@@ -86,8 +81,6 @@ namespace ValheimArena.Core
             }
         }
 
-        // ------------------------------------------------------------------ сеть
-
         public SessionState ToState()
         {
             return new SessionState
@@ -107,7 +100,6 @@ namespace ValheimArena.Core
             };
         }
 
-        /// <summary>Принять состояние от хозяина. Возвращает прежнее состояние боя.</summary>
         public ArenaState Apply(SessionState s)
         {
             var old = State;
@@ -126,8 +118,6 @@ namespace ValheimArena.Core
             LastHeard = Time.unscaledTime;
             return old;
         }
-
-        // ------------------------------------------------------------------ геометрия
 
         public bool IsInside(Vector3 p, float margin = 0f)
         {
@@ -165,7 +155,6 @@ namespace ValheimArena.Core
             return Center + new Vector3(c.x, 0f, c.y);
         }
 
-        /// <summary>Точка периметра по параметру t∈[0,1).</summary>
         public Vector3 PerimeterPoint(float t)
         {
             Vector3 c = Center;
@@ -186,8 +175,6 @@ namespace ValheimArena.Core
             float a = t * Mathf.PI * 2f;
             return c + new Vector3(Mathf.Cos(a) * r, 0f, Mathf.Sin(a) * r);
         }
-
-        // ------------------------------------------------------------------ статистика
 
         public UnitStat Stat(string key)
         {
@@ -219,7 +206,6 @@ namespace ValheimArena.Core
             StatsDirty = true;
         }
 
-        /// <summary>Сводка по сторонам из строк статистики (одинаково у хозяина и гостей).</summary>
         public void RebuildSides()
         {
             Sides.Clear();

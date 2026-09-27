@@ -3,7 +3,6 @@ using ValheimArena.Core;
 
 namespace ValheimArena.UI
 {
-    /// <summary>Окна мода, горячие клавиши и признаки «мод забрал мышь/клавиатуру».</summary>
     public static class ArenaUI
     {
         public static bool MenuOpen;
@@ -18,31 +17,23 @@ namespace ValheimArena.UI
         private static int _dragWindow;
         private static Vector2 _dragLast;
 
-        /// <summary>Курсор нужен моду (открыто окно).</summary>
         public static bool WantsCursor => (MenuOpen || EditorOpen) && Player.m_localPlayer;
 
-        /// <summary>Мышь над окном мода — колесо и обзор камерой не трогаем.</summary>
         public static bool WantsMouse => WantsCursor && _mouseOverWindow;
 
-        /// <summary>В поле ввода мода набирается текст — WASD не двигают камеру и горячие клавиши молчат.</summary>
         public static bool WantsKeyboard => WantsCursor && UiInput.TextFocused;
 
-        /// <summary>Автомасштаб по высоте экрана (1080p = 1) × множитель из настроек.</summary>
         public static float Scale => Mathf.Clamp(Screen.height / 1080f, 0.5f, 4f) * ArenaPlugin.UiScale.Value;
 
         private static UiLanguage? _pendingLanguage;
 
-        /// <summary>
-        /// Сменить язык со следующего кадра: посреди прохода OnGUI раскладка (Layout) и отрисовка (Repaint)
-        /// разошлись бы по ширине подписей.
-        /// </summary>
         public static void RequestLanguage(UiLanguage language) => _pendingLanguage = language;
 
         public static void Update()
         {
             if (_pendingLanguage.HasValue)
             {
-                ArenaPlugin.Language.Value = _pendingLanguage.Value;   // сохраняется в cfg, L перечитывает язык
+                ArenaPlugin.Language.Value = _pendingLanguage.Value;
                 _pendingLanguage = null;
             }
             if (!Player.m_localPlayer)
@@ -75,10 +66,6 @@ namespace ValheimArena.UI
             if (Pressed(ArenaPlugin.KeyTags)) ToggleNameTags();
         }
 
-        /// <summary>
-        /// Таблички над бойцами (имя, звёзды, полоска здоровья) вкл/выкл. Показать таблички при выключенном
-        /// оверлее — значит включить и его: без оверлея таблички не рисуются.
-        /// </summary>
         public static void ToggleNameTags()
         {
             var s = ArenaSettingsStore.Current;
@@ -89,10 +76,6 @@ namespace ValheimArena.UI
                     s.nameTags ? L.T("Таблички над бойцами показаны") : L.T("Таблички над бойцами скрыты"));
         }
 
-        /// <summary>
-        /// Клавиши-символы молчат, пока набирается текст в поле мода; F-клавиши работают всегда,
-        /// чтобы окно можно было закрыть тем же F7, не снимая фокус с поля.
-        /// </summary>
         private static bool Pressed(BepInEx.Configuration.ConfigEntry<KeyCode> key)
         {
             var k = key.Value;
@@ -102,7 +85,6 @@ namespace ValheimArena.UI
             return ZInput.GetKeyDown(k, false);
         }
 
-        /// <summary>Перетаскивание окон за заголовок — по мыши Input System (события IMGUI не приходят).</summary>
         private static void UpdateWindowDrag()
         {
             var mouse = UnityEngine.InputSystem.Mouse.current;
@@ -150,7 +132,6 @@ namespace ValheimArena.UI
 
             Overlay.Draw(scale);
 
-            // Порядок рисования = порядок наложения: редактор поверх меню.
             if (MenuOpen) GuiKit.DrawWindow(1, MenuRect, L.T("АРЕНА  ·  ") + ArenaPlugin.Version, MainWindow.Draw);
             if (EditorOpen) GuiKit.DrawWindow(2, EditorRect, L.T("РЕДАКТОР СУЩЕСТВ"), EditorWindow.Draw);
             _mouseOverWindow = (MenuOpen && MenuRect.Contains(mouse)) || (EditorOpen && EditorRect.Contains(mouse));
@@ -159,7 +140,6 @@ namespace ValheimArena.UI
             GUI.matrix = oldMatrix;
         }
 
-        /// <summary>Размер и место окон — в долях виртуального экрана; при смене разрешения раскладка пересчитывается.</summary>
         private static void PlaceWindows(float scale)
         {
             var vs = new Vector2(Screen.width / scale, Screen.height / scale);

@@ -5,30 +5,18 @@ using ValheimArena.Profiles;
 
 namespace ValheimArena.Core
 {
-    /// <summary>
-    /// Арены мира и ход боя. Сетевая модель:
-    /// • у арены есть хозяин (кто её развернул) — он ведёт состояние (подготовка/отсчёт/бой/пауза/итоги),
-    ///   правила и итоговую статистику и рассылает их всем (<see cref="ArenaNet"/>);
-    /// • существом в Valheim управляет клиент-владелец, и владение переходит между игроками — поэтому каждый
-    ///   клиент сам применяет правила арены (заморозка, граница, поиск цели) к бойцам, которыми владеет;
-    /// • гости (если хозяин разрешил) начинают/останавливают бой через команды хозяину и выпускают своих бойцов.
-    /// </summary>
     public static class Arena
     {
         public static readonly Dictionary<string, ArenaSession> Sessions = new Dictionary<string, ArenaSession>();
 
-        /// <summary>Меняется при любом изменении сессий/правил — кэши бойцов по нему обновляются.</summary>
         public static int SessionsVersion { get; private set; }
 
-        /// <summary>Арена, которую ведёт этот клиент.</summary>
         public static ArenaSession Local { get; private set; }
 
-        /// <summary>Арена, которую показывает интерфейс: своя или ближайшая чужая.</summary>
         public static ArenaSession Current { get; private set; }
 
         public static float TimeScale { get; private set; } = 1f;
 
-        /// <summary>Доля периметра текущей арены вне зоны, которую игра обновляет вокруг персонажа (0…1).</summary>
         public static float OutsideActive { get; private set; }
 
         public static ArenaSettings S => ArenaSettingsStore.Current;
@@ -61,8 +49,6 @@ namespace ValheimArena.Core
         private static void Bump() => SessionsVersion++;
 
         public static bool HasPeers => ZNet.instance && ZNet.instance.GetPeerConnections() > 0;
-
-        // ================================================================== хозяин: жизненный цикл
 
         public static void Activate(Vector3 center)
         {
@@ -101,7 +87,6 @@ namespace ValheimArena.Core
             ArenaBoundary.Rebuild();
         }
 
-        /// <summary>Свернуть свою арену (хозяин).</summary>
         public static void Deactivate(bool despawn)
         {
             if (Local == null) return;
@@ -127,12 +112,9 @@ namespace ValheimArena.Core
             ArenaNet.SendState(Local);
         }
 
-        // ================================================================== команды (хозяин и гости)
-
         public static void StartFight() => Command("start");
         public static void Pause() => Command("pause");
         public static void Resume() => Command("resume");
-        /// <summary>Очистить арену по выбору в настройках (существа / ресурсы / надгробия / гаммельтролли / деревья).</summary>
         public static void ClearUnits() => ClearArena(ArenaCleanup.FromSettings(S));
 
         public static void ClearArena(ClearWhat what)
@@ -167,7 +149,6 @@ namespace ValheimArena.Core
             else ArenaNet.SendCommand(s, cmd, LocalPlayerName);
         }
 
-        /// <summary>Команда на клиенте хозяина: своя или присланная гостем.</summary>
         public static void ExecuteHostCommand(string cmd, string who, bool fromGuest)
         {
             var s = Local;
@@ -237,7 +218,6 @@ namespace ValheimArena.Core
             s.State = ArenaState.Fighting;
             s.FightStart = ArenaSession.Now;
             ChangedLocal();
-            // Гости поднимут своих бойцов по смене состояния; своих — здесь (своё эхо хозяин не обрабатывает).
             foreach (var u in ArenaUnit.All)
                 if (u && u.SessionId == s.Id) u.AlertPending = true;
             Message(L.T("В бой!"));
@@ -247,7 +227,6 @@ namespace ValheimArena.Core
         {
             var s = Local;
             if (s == null) return;
-            // Рассылка всем (и себе): каждый клиент убирает то, чем управляет, хозяин — ещё и остальное.
             if (ArenaNet.Ready) ArenaNet.SendClear(s.Id, what);
             else OnClear(s.Id, what);
             if ((what & ClearWhat.Creatures) != 0)
@@ -258,7 +237,6 @@ namespace ValheimArena.Core
             ChangedLocal();
         }
 
-        /// <summary>У всех клиентов: убрать выбранное внутри границы арены.</summary>
         public static void OnClear(string sessionId, ClearWhat what)
         {
             var s = FindSession(sessionId);
@@ -274,10 +252,6 @@ namespace ValheimArena.Core
 
         public static void DespawnUnit(ArenaUnit u, bool adjustBossKey = true) => Despawn(u, adjustBossKey);
 
-        /// <summary>
-        /// Снять с ключа мира activeBosses сразу N боссов. SetGlobalKey уходит на сервер, и локальная копия
-        /// обновляется только его ответом — N удалений за один проход прочитали бы одно значение и сняли бы одного.
-        /// </summary>
         public static void ReleaseActiveBosses(int n)
         {
             if (n <= 0 || !ZoneSystem.instance) return;
@@ -289,13 +263,10 @@ namespace ValheimArena.Core
         {
             if (!u || !u.NView || !u.NView.IsValid()) return;
             if (!u.NView.IsOwner()) u.NView.ClaimOwnership();
-            // Встревоженный босс учтён в ключе мира activeBosses (мешает порталам при «NoBossPortals») — снимаем, как это делает смерть.
             var zdo = u.NView.GetZDO();
             if (adjustBossKey && zdo.GetBool(ZDOVars.s_bossCount)) ReleaseActiveBosses(1);
             ZNetScene.instance.Destroy(u.gameObject);
         }
-
-        // ================================================================== сеть: входящее
 
         public static void OnRemoteState(SessionState st)
         {
@@ -382,8 +353,6 @@ namespace ValheimArena.Core
             if (s == null || s.IsLocal) return;
             s.ReplaceStats(sum.units);
         }
-
-        // ================================================================== спавн
 
         public static bool CanSpawn(out string reason)
         {
@@ -473,16 +442,10 @@ namespace ValheimArena.Core
             var unit = ArenaUnit.Attach(ch);
             ch.SetLevel(Mathf.Clamp(stars + 1, 1, 21));
             ch.SetHealth(ch.GetMaxHealth());
-            ProfileLogic.RecalculateHealth(unit);   // полное HP и свой максимум в ZDO — уже с уровнем
+            ProfileLogic.RecalculateHealth(unit);
             return unit;
         }
 
-        // ================================================================== призванные и посторонние
-
-        /// <summary>
-        /// Существо, созданное бойцом арены (призыв босса, порождение атаки, снаряда, эффекта), встаёт на его сторону:
-        /// та же арена, команда и фракция, поведение — как у призвавшего.
-        /// </summary>
         public static void AdoptSummon(Character spawned, ArenaUnit summoner)
         {
             if (!spawned || spawned.IsPlayer() || !summoner || ArenaUnit.Get(spawned)) return;
@@ -513,18 +476,12 @@ namespace ValheimArena.Core
             return u;
         }
 
-        /// <summary>
-        /// Посторонние внутри границы (забредшие дикие, чужие призывы): по правилу арены — не замечать, вовлечь в бой
-        /// как команду «Посторонние» или убрать. Решает клиент-владелец существа.
-        /// </summary>
         private static void HandleIntruders()
         {
             if (Sessions.Count == 0) return;
             foreach (var c in new List<Character>(Character.GetAllCharacters()))
             {
                 if (!c || c.IsPlayer() || c.IsDead() || c.IsTamed() || ArenaUnit.Get(c)) continue;
-                // Боссы и существа прогресса мира (ключ победы) не втягиваются: у бойца ключ и катсцена стираются,
-                // добыча по правилу арены, очистка удаляет — настоящий босс с алтаря у арены пропал бы для мира.
                 if (c.IsBoss() || !string.IsNullOrEmpty(c.m_defeatSetGlobalKey)) continue;
                 var nview = c.GetComponent<ZNetView>();
                 if (!nview || !nview.IsValid() || !nview.IsOwner() || !c.GetComponent<BaseAI>()) continue;
@@ -558,8 +515,6 @@ namespace ValheimArena.Core
                 case Placement.CameraAim:
                     return s.ClampInside(CameraAimPoint(), 0.9f);
                 case Placement.TeamSide:
-                    // Сторона — по номеру команды, а не по порядку в составе: у хозяина и гостей одна и та же.
-                    // 1 и 2 — друг напротив друга, 3 и 4 — поперёк, 5–8 — по диагоналям.
                     float ang = TeamSideAngles[Mathf.Clamp(g.team, 1, Hostility.TeamCount) - 1] * Mathf.Deg2Rad;
                     return s.Center + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * (s.Rules.radius * 0.6f);
                 default:
@@ -592,8 +547,6 @@ namespace ValheimArena.Core
             return ZoneSystem.instance ? ZoneSystem.instance.GetGroundHeight(p) : p.y;
         }
 
-        // ================================================================== такты
-
         public static void Update()
         {
             if (_znetSeen != ZNet.instance || (ZNet.instance == null && Sessions.Count > 0))
@@ -623,13 +576,11 @@ namespace ValheimArena.Core
                 {
                     if (!u) continue;
                     u.Refresh();
-                    // Замороженному ИИ не копить «время мира»: после паузы он разом вылечился бы за всё время.
                     if (u.IsOwner && ShouldFreeze(u)) u.NView.GetZDO().Set(ZDOVars.s_worldTimeHash, ZNet.instance.GetTime().Ticks);
                     var us = u.Session;
                     if (us != null && us.Live && u.Alive) ArenaFlight.EnsureAirborne(u, 1f);
                     if (u.AlertPending)
                     {
-                        // Поднимает по тревоге только владелец — у него считается ИИ.
                         if (u.IsOwner && u.AI) u.AI.Alert();
                         u.AlertPending = false;
                     }
@@ -713,7 +664,6 @@ namespace ValheimArena.Core
             CreatureCatalog.Invalidate();
         }
 
-        /// <summary>Хозяин: правила из своих настроек; изменились — разослать.</summary>
         private static void HostSyncRules()
         {
             if (Local == null) return;
@@ -726,7 +676,6 @@ namespace ValheimArena.Core
             ChangedLocal();
         }
 
-        /// <summary>Своя арена, иначе ближайшая живая чужая рядом с персонажем.</summary>
         private static ArenaSession PickCurrent()
         {
             if (Local != null) return Local;
@@ -744,10 +693,6 @@ namespace ValheimArena.Core
             return best;
         }
 
-        /// <summary>
-        /// Бойцы, чья арена исчезла. Свою старую арену убираем сразу; чужую — только если о ней нет вестей
-        /// дольше 30 с и мы в мире не меньше 30 с (иначе удалили бы бойцов арены, чьё состояние ещё не пришло).
-        /// </summary>
         private static void CleanupOrphans()
         {
             float now = Time.unscaledTime;
@@ -765,7 +710,6 @@ namespace ValheimArena.Core
                 if (u.OrphanSince < 0f) u.OrphanSince = now;
                 bool expired = now - u.OrphanSince > 30f && now - _worldEnterTime > 30f;
                 if (!myOldArena && !expired) continue;
-                // Забредших диких отпускаем в мир, выпущенных и призванных — убираем.
                 if (u.Adopted == ArenaUnit.Intruder) u.Release();
                 else Despawn(u);
             }
@@ -773,12 +717,6 @@ namespace ValheimArena.Core
 
         private static readonly HashSet<string> OwnerlessLogged = new HashSet<string>();
 
-        /// <summary>
-        /// Боец без владельца (вышел из активной зоны всех игроков или его владелец отключился) у игры невидим и
-        /// заморожен, но жив: висят метка и полоска босса, бой не кончается. Забирает его сервер мира — его сторож
-        /// (<see cref="Patches.KeepArenaOwnershipPatch"/>) потом держит владение. Остальные клиенты не забирают:
-        /// без сторожа сервер снова снял бы владельца через 2 с, и боец мигал бы.
-        /// </summary>
         private static void ClaimOwnerless()
         {
             if (!ZNet.instance || !ZNet.instance.IsServer()) return;
@@ -794,10 +732,6 @@ namespace ValheimArena.Core
 
         private static readonly Dictionary<string, float> EscapeLogged = new Dictionary<string, float>();
 
-        /// <summary>
-        /// Диагностика: боец дальше 3 м за границей. Своих бойцов стена держит каждый физический такт, поэтому
-        /// такая запись — либо боец под управлением другого игрока, либо сбой; в лог пишется, кто им управляет.
-        /// </summary>
         private static void WatchEscapes()
         {
             float now = Time.unscaledTime;
@@ -819,11 +753,6 @@ namespace ValheimArena.Core
             if (EscapeLogged.Count > 512) EscapeLogged.Clear();
         }
 
-        /// <summary>
-        /// Режим «идёт к врагам»: цель есть всегда — ближайший враждебный боец той же арены или игрок-участник,
-        /// и её место известно всегда (иначе существо дошло бы до места, где видело врага, и встало).
-        /// Каждый клиент — для бойцов, которыми владеет.
-        /// </summary>
         private static void ForceTargets()
         {
             foreach (var s in Sessions.Values)
@@ -891,10 +820,6 @@ namespace ValheimArena.Core
             }
         }
 
-        /// <summary>
-        /// Бойцы вне активной зоны вокруг персонажа (зависит от дальности симуляции) игра не обновляет и выгружает;
-        /// у хозяина это ещё и ломает подсчёт итога — предупреждаем, если граница арены туда заходит.
-        /// </summary>
         private static float ComputeOutsideActive()
         {
             var s = Current;
@@ -906,8 +831,6 @@ namespace ValheimArena.Core
                 if (!ZNetScene.InActiveArea(s.PerimeterPoint(i / (float)n), refPos)) outside++;
             return outside / (float)n;
         }
-
-        // ================================================================== итог и статистика
 
         public static List<ArenaUnit> SessionUnits(bool aliveOnly) => SessionUnits(Current, aliveOnly);
 
@@ -924,11 +847,6 @@ namespace ValheimArena.Core
             return list;
         }
 
-        /// <summary>
-        /// Есть ли пара, где один может напасть на другого. Нападать умеет только ИИ монстров: ИИ животных (олень,
-        /// заяц) лишь убегает, m_aiCannotTargetOthers не выбирает цель; m_aiSkipTarget целью не становится.
-        /// Иначе «олень против зайца» не кончился бы никогда.
-        /// </summary>
         private static bool HasHostilePair(List<ArenaUnit> alive)
         {
             for (int i = 0; i < alive.Count; i++)
@@ -942,7 +860,6 @@ namespace ValheimArena.Core
             a.Monster && a.Character && !a.Character.m_aiCannotTargetOthers &&
             b.Character && !b.Character.m_aiSkipTarget && Hostility.UnitsHostile(a, b);
 
-        /// <summary>Хозяин: итог, когда враждующих сторон не осталось (по бойцам, видимым у хозяина).</summary>
         private static void CheckFinish()
         {
             var s = Local;
@@ -974,7 +891,6 @@ namespace ValheimArena.Core
             Message(text);
         }
 
-        /// <summary>Хозяин: строки статистики по видимым бойцам (подписи, стороны, живы ли).</summary>
         private static void HostRefreshStats()
         {
             var s = Local;
@@ -1013,7 +929,6 @@ namespace ValheimArena.Core
             return true;
         }
 
-        /// <summary>Урон считается у владельца пострадавшего — копим и раз в секунду отправляем хозяину арены.</summary>
         public static void OnDamage(Character victim, Character attacker, float amount)
         {
             if (amount <= 0f) return;
@@ -1057,7 +972,6 @@ namespace ValheimArena.Core
             PendingTaken.Remove(sessionId);
         }
 
-        /// <summary>Гибель считается у владельца погибшего — рассылаем событие всем (лента, итоги у хозяина).</summary>
         public static void OnDeath(Character victim, Character killer)
         {
             var v = ArenaUnit.Get(victim);
@@ -1095,8 +1009,6 @@ namespace ValheimArena.Core
             string kind = u.Adopted == ArenaUnit.Summoned ? L.T(" (призван)") : u.Adopted == ArenaUnit.Intruder ? L.T(" (чужак)") : "";
             return u.DisplayName + stars + " #" + u.SerialNumber + kind;
         }
-
-        // ================================================================== время
 
         public static bool CanControlTime()
         {

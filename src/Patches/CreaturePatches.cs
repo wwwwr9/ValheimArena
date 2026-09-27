@@ -5,14 +5,6 @@ using ValheimArena.Core;
 
 namespace ValheimArena.Patches
 {
-    // ======================================================================== союзники лекарей и поддержки
-
-    /// <summary>
-    /// Атаки «на раненого союзника» (лечение) и «на союзника» (поддержка): друг в игре — всякий, кто не враг
-    /// (BaseAI.HaveFriendInRange / HaveHurtFriendInRange), первый попавшийся. Изоляция арены делает «не врагами»
-    /// всех посторонних — лекарь шёл бы лечить зрителей и диких за стеной. Бойцу арены друг — только не враждебный
-    /// ему боец той же арены, ближайший. Лечение себя, как в игре, остаётся.
-    /// </summary>
     internal static class ArenaFriends
     {
         public static bool Find(BaseAI ai, List<Character> characters, float range, bool hurtOnly, out Character result)
@@ -59,19 +51,12 @@ namespace ValheimArena.Patches
             !ArenaFriends.Find(__instance, characters, range, true, out __result);
     }
 
-    // ======================================================================== жизненный цикл бойца
-
-    /// <summary>
-    /// Детёныш-боец не вырастает: игра создаёт взрослого новым объектом (Growup), и тот потерял бы арену,
-    /// команду, профиль и поведение, а строка статистики детёныша осталась бы «жив».
-    /// </summary>
     [HarmonyPatch(typeof(Growup), "GrowUpdate")]
     internal static class GrowupPatch
     {
         private static bool Prefix(Growup __instance) => ArenaUnit.Get(__instance.GetComponent<Character>()) == null;
     }
 
-    /// <summary>Приручённым бойцом зрители не командуют («за мной» / «стой») — это сбивает его в бою.</summary>
     [HarmonyPatch(typeof(Tameable), nameof(Tameable.Interact))]
     internal static class TameableInteractPatch
     {
@@ -83,14 +68,12 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>Бойца не приручают посреди боя (он ест добычу, пока не встревожен, и становится приручённым).</summary>
     [HarmonyPatch(typeof(Tameable), "TamingUpdate")]
     internal static class TamingUpdatePatch
     {
         private static bool Prefix(Tameable __instance) => ArenaUnit.Get(__instance.GetComponent<Character>()) == null;
     }
 
-    /// <summary>Приручённые бойцы не размножаются: потомство не было бы бойцом и осталось бы в мире.</summary>
     [HarmonyPatch(typeof(Procreation), "Procreate")]
     internal static class ProcreatePatch
     {

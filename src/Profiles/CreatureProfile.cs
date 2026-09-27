@@ -3,7 +3,6 @@ using System.Collections.Generic;
 
 namespace ValheimArena.Profiles
 {
-    /// <summary>Набор урона по типам (зеркало HitData.DamageTypes, пригодное для JsonUtility).</summary>
     [Serializable]
     public class DamageSet
     {
@@ -62,7 +61,6 @@ namespace ValheimArena.Profiles
         public DamageSet Clone() => (DamageSet)MemberwiseClone();
     }
 
-    /// <summary>Сопротивления (значения enum HitData.DamageModifier).</summary>
     [Serializable]
     public class ResistSet
     {
@@ -115,7 +113,6 @@ namespace ValheimArena.Profiles
 
         public ResistSet Clone() => (ResistSet)MemberwiseClone();
 
-        /// <summary>Порядок от «уязвим» к «неуязвим» для кнопок −/+.</summary>
         public static readonly HitData.DamageModifier[] Ladder =
         {
             HitData.DamageModifier.VeryWeak, HitData.DamageModifier.Weak, HitData.DamageModifier.SlightlyWeak,
@@ -141,10 +138,6 @@ namespace ValheimArena.Profiles
         }
     }
 
-    /// <summary>
-    /// Эффект с собственным уроном (AoE или снаряд, чей урон задан в самом префабе, а не в атаке):
-    /// удары по площади боссов, взрывы, лужи яда и т.п.
-    /// </summary>
     [Serializable]
     public class EffectOverride
     {
@@ -162,9 +155,6 @@ namespace ValheimArena.Profiles
         }
     }
 
-    /// <summary>
-    /// Слабое место (WeakSpot): попадание в его коллайдер игра считает по его сопротивлениям вместо основных.
-    /// </summary>
     [Serializable]
     public class WeakSpotOverride
     {
@@ -179,13 +169,10 @@ namespace ValheimArena.Profiles
         }
     }
 
-    /// <summary>Одна атака существа (у гуманоидов Valheim атака — это «оружие»-предмет в инвентаре).</summary>
     [Serializable]
     public class AttackOverride
     {
-        /// <summary>Имя префаба предмета-атаки — ключ сопоставления.</summary>
         public string item = "";
-        /// <summary>m_shared.m_name — запасной ключ.</summary>
         public string sharedName = "";
         public string displayName = "";
         public string source = "";
@@ -220,15 +207,11 @@ namespace ValheimArena.Profiles
         public string animation = "";
         public List<string> effects = new List<string>();
 
-        /// <summary>2 — сняты и поля ниже; у профилей старых версий их нет (нули), и они не применяются.</summary>
         public int captured;
-        /// <summary>Attack.AttackType: удар (горизонтальный/вертикальный), снаряд, площадь…</summary>
         public int attackType;
-        /// <summary>У удара по площади — радиус площади (m_attackRayWidth); у ближнего — ширина луча.</summary>
         public float attackRayWidth;
         public string statusEffect = "";
         public float statusEffectChance = 1f;
-        /// <summary>ItemData.AiTarget: враг / раненый союзник (лечение) / союзник (поддержка).</summary>
         public int aiTargetType;
         public bool aiInDungeonOnly;
         public bool aiInMistOnly;
@@ -246,16 +229,13 @@ namespace ValheimArena.Profiles
         }
     }
 
-    /// <summary>Профиль существа из редактора: полный снимок параметров, применяемый к бойцам арены.</summary>
     [Serializable]
     public class CreatureProfile
     {
-        /// <summary>2 — сняты поля полёта/плавания ниже; у профилей версии 1 их нет, они не применяются.</summary>
         public int version = 2;
         public string prefab = "";
         public string name = "";
 
-        // Живучесть
         public float health;
         public float scale = 1f;
         public float damageDealtMultiplier = 1f;
@@ -265,7 +245,6 @@ namespace ValheimArena.Profiles
         public bool staggerWhenBlocked = true;
         public float regenAllHPTime;
 
-        // Движение
         public float walkSpeed;
         public float speed;
         public float runSpeed;
@@ -280,7 +259,6 @@ namespace ValheimArena.Profiles
         public float swimTurnSpeed;
         public float jumpForce;
 
-        // Поведение
         public float viewRange;
         public float viewAngle;
         public float hearRange;

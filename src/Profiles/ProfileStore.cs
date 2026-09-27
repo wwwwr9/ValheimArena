@@ -6,7 +6,6 @@ using ValheimArena.Core;
 
 namespace ValheimArena.Profiles
 {
-    /// <summary>Профили существ на диске: BepInEx\config\ValheimArena\profiles\&lt;префаб&gt;\&lt;имя&gt;.json</summary>
     public static class ProfileStore
     {
         private static readonly Dictionary<string, CreatureProfile> Cache = new Dictionary<string, CreatureProfile>();
@@ -29,7 +28,6 @@ namespace ValheimArena.Profiles
             return list;
         }
 
-        /// <summary>Префабы, для которых есть хотя бы один профиль.</summary>
         public static List<string> PrefabsWithProfiles()
         {
             var list = new List<string>();
