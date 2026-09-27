@@ -20,7 +20,7 @@ namespace ValheimArena.Core
         public string SearchKey;
     }
 
-    public static partial class CreatureCatalog
+    public static class CreatureCatalog
     {
         private static readonly List<CreatureEntry> Entries = new List<CreatureEntry>();
         private static readonly Dictionary<string, CreatureEntry> ByPrefab = new Dictionary<string, CreatureEntry>();
@@ -97,10 +97,7 @@ namespace ValheimArena.Core
             foreach (var e in Entries)
                 if (!Factions.Contains(e.Faction)) Factions.Add(e.Faction);
             Factions.Sort();
-            CatalogBuilt(Entries);
         }
-
-        static partial void CatalogBuilt(List<CreatureEntry> entries);
 
         public static IReadOnlyList<Character.Faction> PresentFactions
         {

@@ -24,7 +24,6 @@ namespace ValheimArena.Core
         public static bool Active => Current != null;
         public static ArenaState State => Current?.State ?? ArenaState.Inactive;
         public static string StateName => Current?.StateName ?? L.T("не активна");
-        public static bool IsHost => Current != null && Current.IsLocal;
         public static bool CanControl => Current != null && (Current.IsLocal || Current.Rules.allowGuests);
         public static bool CanEditRules => Current == null || Current.IsLocal;
 

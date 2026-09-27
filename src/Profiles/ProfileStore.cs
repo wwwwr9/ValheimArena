@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using UnityEngine;
 using ValheimArena.Core;
 
 namespace ValheimArena.Profiles
