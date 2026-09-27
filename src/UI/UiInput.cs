@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
@@ -16,7 +15,7 @@ namespace ValheimArena.UI
         private static bool _pressPending;
         private static float _wheelPending;
         private static readonly List<char> TypedPending = new List<char>();
-        private static bool _backspace, _delete, _submit, _cancel, _clear, _paste;
+        private static bool _backspace, _submit, _cancel, _clear, _paste;
         private static Keyboard _hookedKeyboard;
 
         private const int NoControl = -1;
@@ -43,7 +42,7 @@ namespace ValheimArena.UI
 
         public static string FocusId { get; private set; }
         private static readonly List<char> FrameTyped = new List<char>();
-        private static bool _fBackspace, _fDelete, _fSubmit, _fCancel, _fClear, _fPaste;
+        private static bool _fBackspace, _fSubmit, _fCancel, _fClear, _fPaste;
         private static int _dragId = NoControl;
         private static float _dragFrac;
         private static bool _dragArmed;
@@ -129,8 +128,8 @@ namespace ValheimArena.UI
                 FrameTyped.Clear();
                 FrameTyped.AddRange(TypedPending);
                 TypedPending.Clear();
-                _fBackspace = _backspace; _fDelete = _delete; _fSubmit = _submit; _fCancel = _cancel; _fClear = _clear; _fPaste = _paste;
-                _backspace = _delete = _submit = _cancel = _clear = _paste = false;
+                _fBackspace = _backspace; _fSubmit = _submit; _fCancel = _cancel; _fClear = _clear; _fPaste = _paste;
+                _backspace = _submit = _cancel = _clear = _paste = false;
             }
             else
             {

@@ -248,15 +248,6 @@ namespace ValheimArena.UI
             return value;
         }
 
-        public static float Number(string label, float value, string id, string fmt = "0.##", float labelWidth = 170f, float fieldWidth = 80f)
-        {
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(label, Label, GUILayout.Width(labelWidth));
-            value = NumberBox(value, id, fmt, fieldWidth);
-            GUILayout.EndHorizontal();
-            return value;
-        }
-
         public static float NumberBox(float value, string id, string fmt, float width)
         {
             string shown = value.ToString(fmt, Inv);
