@@ -9,6 +9,29 @@ The interface is available in English, the default, and in Russian; the language
 EN / RU / Auto buttons at the top of the arena menu (F7) or with `Language` in the config. Documentation in
 Russian is in [README.ru.md](README.ru.md).
 
+<p align="center">
+  <img src="docs/screenshots/queen-vs-fader.jpg" alt="The Queen and Fader fighting on the Plains" width="100%">
+</p>
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/gammeltroll-vs-fader.jpg" alt="A gammeltroll and Fader fighting on a snowy coast"></td>
+    <td width="50%"><img src="docs/screenshots/gammeltrolls-vs-charred.jpg" alt="Three gammeltrolls against an army of charred"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>A gammeltroll against Fader</sub></td>
+    <td align="center"><sub>Three gammeltrolls against 26 charred warriors and marksmen</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/seekers-vs-fulings-overlay.jpg" alt="Sixteen seekers raiding sixteen fulings with the arena overlay shown"></td>
+    <td width="50%"><img src="docs/screenshots/seekers-vs-fulings.jpg" alt="Sixteen seekers raiding sixteen fulings with the arena overlay hidden"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>16 seekers against 16 fulings with the arena overlay: team score, name plates and health bars</sub></td>
+    <td align="center"><sub>The same moment with the overlay hidden (F10)</sub></td>
+  </tr>
+</table>
+
 ## Installation
 
 - With a mod manager (r2modman or Thunderstore Mod Manager), install ValheimArena from Thunderstore; the manager
