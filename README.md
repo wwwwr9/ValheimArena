@@ -1,4 +1,6 @@
-# Valheim Arena
+<p align="center">
+  <img src="docs/logo.webp" alt="Valheim Arena" width="600">
+</p>
 
 Valheim Arena is a BepInEx 5 mod that turns a part of the world into an arena. Any creature of the game,
 bosses included, can be spawned with chosen stars, teams and factions onto a fenced battleground and watched
