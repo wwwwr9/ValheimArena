@@ -6,12 +6,6 @@ using ValheimArena.Core;
 
 namespace ValheimArena.Patches
 {
-    // ======================================================================== «идёт к врагам»
-
-    /// <summary>
-    /// Режим «идёт к врагам»: во время боя боец знает, где всё, что находится на арене. Без этого MonsterAI
-    /// доходит до места, где последний раз видел врага, и встаёт (или бродит там же), пока тот за препятствием.
-    /// </summary>
     internal static class Omniscience
     {
         public static bool Knows(BaseAI ai, Character target)
@@ -21,7 +15,6 @@ namespace ValheimArena.Patches
             if (u == null || u.Behavior != ArenaBehavior.Hunt) return false;
             var s = u.Session;
             if (s == null || !s.Live || s.State != ArenaState.Fighting) return false;
-            // Игрок в режиме призрака или отладочного полёта игрой не замечается — и «всезнание» его не выдаёт.
             if (target is Player p && (p.InGhostMode() || p.InDebugFlyMode())) return false;
             return !target.IsDead() && s.IsInside(target.transform.position, 5f);
         }
@@ -60,15 +53,8 @@ namespace ValheimArena.Patches
         }
     }
 
-    // ======================================================================== «стоит на месте»
-
-    /// <summary>
-    /// Режим «стоит на месте»: всё перемещение ИИ идёт через MoveTowards/MoveTowardsSwoop — там разворачиваемся
-    /// к цели, но не шагаем. Атаки (в т.ч. с рывком анимации) работают как обычно.
-    /// </summary>
     internal static class HoldPosition
     {
-        /// <summary>true — движение перехвачено (развернуться, но не шагать; летун лишь держит высоту).</summary>
         public static bool Hold(BaseAI ai, Vector3 dir)
         {
             var u = ArenaUnit.GetByAI(ai);
@@ -95,16 +81,6 @@ namespace ValheimArena.Patches
         private static bool Prefix(BaseAI __instance, Vector3 dir) => !HoldPosition.Hold(__instance, dir);
     }
 
-    // ======================================================================== полёт
-
-    /// <summary>
-    /// Летуны в режиме «идёт к врагам» подлетают на крейсерской высоте и держат высоту атаки
-    /// (иначе игра ведёт их к цели у самой земли — см. <see cref="ArenaFlight"/>).
-    /// </summary>
-    /// <summary>
-    /// Летун в радиусе атаки игра «останавливает» (StopMoving) на той высоте, где он оказался. Если его текущая атака
-    /// разрешена только выше/ниже (m_aiWhenFlyingAltitudeMin/Max), он так и висел бы без удара — подправляем высоту.
-    /// </summary>
     [HarmonyPatch(typeof(MonsterAI), nameof(MonsterAI.UpdateAI))]
     internal static class FlyingAltitudeKeeper
     {
@@ -140,13 +116,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    // ======================================================================== призывы
-
-    /// <summary>
-    /// Кто сейчас что-то порождает. Существа, созданные внутри этих вызовов (Character.Awake), встают на сторону
-    /// создателя. Стек — на случай вложенных порождений; посторонний создатель тоже кладётся (пустым), чтобы,
-    /// например, слизень, разделившийся от удара бойца, не записался бойцу в союзники.
-    /// </summary>
     internal static class SpawnContext
     {
         private static readonly List<ArenaUnit> Stack = new List<ArenaUnit>();
@@ -165,7 +134,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>Восстановление бойца из ZDO, иначе — порождение бойца арены встаёт на его сторону.</summary>
     [HarmonyPatch(typeof(Character), "Awake")]
     internal static class CharacterAwakePatch
     {
@@ -178,7 +146,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>Атака: удар, область, снаряд, m_spawnOnTrigger.</summary>
     [HarmonyPatch(typeof(Attack), nameof(Attack.OnAttackTrigger))]
     internal static class AttackTriggerContext
     {
@@ -186,7 +153,6 @@ namespace ValheimArena.Patches
         private static Exception Finalizer(Exception __exception, bool __state) { SpawnContext.Pop(__state); return __exception; }
     }
 
-    /// <summary>Очереди снарядов идут и после срабатывания атаки.</summary>
     [HarmonyPatch(typeof(Attack), "FireProjectileBurst")]
     internal static class AttackBurstContext
     {
@@ -222,11 +188,6 @@ namespace ValheimArena.Patches
         private static Exception Finalizer(Exception __exception, bool __state) { SpawnContext.Pop(__state); return __exception; }
     }
 
-    /// <summary>
-    /// Способность призыва, запускающаяся сама при появлении (m_spawnOnAwake), стартует раньше, чем игра сообщит
-    /// ей владельца (Setup), — её m_owner так и остаётся пустым. Запоминаем создателя в момент появления
-    /// (Awake идёт внутри атаки/снаряда, т.е. внутри контекста создателя).
-    /// </summary>
     [HarmonyPatch(typeof(SpawnAbility), nameof(SpawnAbility.Awake))]
     internal static class SpawnAbilityRemember
     {
@@ -247,11 +208,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>
-    /// Способность призыва (боссы, посохи) порождает существ в сопрограмме, вне любого контекста, но сразу после
-    /// каждого вызывает SetupAoe(порождённый, точка) — здесь и забираем порождённого на сторону призвавшего:
-    /// владелец способности, а если его нет — тот, в чьём контексте способность появилась.
-    /// </summary>
     [HarmonyPatch(typeof(SpawnAbility), "SetupAoe")]
     internal static class SpawnAbilityAdopt
     {

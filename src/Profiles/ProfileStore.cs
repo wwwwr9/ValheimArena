@@ -6,7 +6,6 @@ using ValheimArena.Core;
 
 namespace ValheimArena.Profiles
 {
-    /// <summary>Профили существ на диске: BepInEx\config\ValheimArena\profiles\&lt;префаб&gt;\&lt;имя&gt;.json</summary>
     public static class ProfileStore
     {
         private static readonly Dictionary<string, CreatureProfile> Cache = new Dictionary<string, CreatureProfile>();
@@ -29,7 +28,6 @@ namespace ValheimArena.Profiles
             return list;
         }
 
-        /// <summary>Префабы, для которых есть хотя бы один профиль.</summary>
         public static List<string> PrefabsWithProfiles()
         {
             var list = new List<string>();
@@ -93,11 +91,6 @@ namespace ValheimArena.Profiles
             catch { return null; }
         }
 
-        /// <summary>
-        /// Чего нет в тексте — как в игре. Профили, записанные до перехода на Newtonsoft.Json (JsonUtility терял
-        /// вложенные классы), приходят без сопротивлений и атак: «все обычные» сняли бы с существа ванильные
-        /// иммунитеты, поэтому сопротивления берутся с прототипа, а списки — пустые (атаки остаются ванильными).
-        /// </summary>
         private static CreatureProfile Normalize(CreatureProfile p, string prefab)
         {
             if (p == null) return null;

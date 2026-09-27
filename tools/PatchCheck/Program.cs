@@ -5,11 +5,6 @@ using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
-/// <summary>
-/// Сверка Harmony-патчей мода с текущими сборками игры: существуют ли целевые методы и поля,
-/// однозначна ли перегрузка, есть ли у целевого метода параметры, которые запрашивают префиксы/постфиксы.
-/// Запускается из build.ps1; после обновления Valheim покажет, что именно разошлось.
-/// </summary>
 internal static class Program
 {
     private static readonly List<ModuleDefinition> GameModules = new List<ModuleDefinition>();
@@ -51,10 +46,6 @@ internal static class Program
         return _errors == 0 ? 0 : 1;
     }
 
-    /// <summary>
-    /// Перевод интерфейса: у каждой русской строки кода мода есть английская в En.Strings (ключ — ldstr перед
-    /// значением в инициализаторе словаря). Двуязычные описания настроек (ArenaPlugin.BindConfig) не переводятся.
-    /// </summary>
     private static int CheckLocalization(ModuleDefinition mod)
     {
         var en = mod.GetTypes().FirstOrDefault(t => t.Namespace == "ValheimArena" && t.Name == "En");
@@ -99,7 +90,6 @@ internal static class Program
         {
             var t = m.GetType(fullName);
             if (t != null) return t;
-            // Вложенные типы: A/B
             t = m.GetTypes().FirstOrDefault(x => x.FullName == fullName);
             if (t != null) return t;
         }
@@ -147,7 +137,6 @@ internal static class Program
 
     private static string StripRef(TypeReference t) => t.FullName.TrimEnd('&');
 
-    /// <summary>AccessTools.FieldRefAccess&lt;T,F&gt;("поле") и AccessTools.Method(typeof(T), "метод").</summary>
     private static int CheckReflectionCalls(TypeDefinition owner, MethodDefinition m)
     {
         int count = 0;
@@ -172,7 +161,6 @@ internal static class Program
             }
             else if (call.Name == "Method")
             {
-                // ldtoken T; call GetTypeFromHandle; ldstr "name"; [массив типов параметров]; call Method
                 string name = null;
                 TypeReference typeRef = null;
                 int nameAt = -1;

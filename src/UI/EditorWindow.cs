@@ -5,11 +5,6 @@ using ValheimArena.Profiles;
 
 namespace ValheimArena.UI
 {
-    /// <summary>
-    /// Редактор существ: здоровье, сопротивления, движение, поведение и каждая атака по отдельности
-    /// (урон по типам, дальность, интервал, отбрасывание, снаряды, эффекты с собственным уроном).
-    /// Результат — именованный профиль, который выбирается в группе состава или применяется к живым бойцам.
-    /// </summary>
     public static class EditorWindow
     {
         private static string _prefab = "";
@@ -45,15 +40,12 @@ namespace ValheimArena.UI
             GUILayout.EndHorizontal();
         }
 
-        /// <summary>Открыть редактор на существе (из других окон).</summary>
         public static void Open(string prefab, string profile)
         {
             ArenaUI.EditorOpen = true;
             Select(prefab);
             if (!string.IsNullOrEmpty(profile)) LoadProfile(profile);
         }
-
-        // ------------------------------------------------------------------ список
 
         private static void DrawList()
         {
@@ -106,9 +98,6 @@ namespace ValheimArena.UI
             GuiKit.ResetBuffers();
         }
 
-        /// <summary>
-        /// Профиль, сохранённый раньше, может не знать об атаках/эффектах, появившихся в игре позже, — дополняем их ванилью.
-        /// </summary>
         private static CreatureProfile Merge(CreatureProfile p)
         {
             if (_vanilla == null) return p;
@@ -145,8 +134,6 @@ namespace ValheimArena.UI
             return p;
         }
 
-        // ------------------------------------------------------------------ редактор
-
         private static void DrawEditor()
         {
             var entry = CreatureCatalog.Get(_prefab);
@@ -159,7 +146,6 @@ namespace ValheimArena.UI
 
             GUILayout.Label(GuiKit.Colored(entry.Display, Color.white) + GuiKit.Colored("  " + entry.Prefab + " · " + Hostility.FactionName((int)entry.Faction), GuiKit.MutedColor), GuiKit.Header);
 
-            // --- профили
             GUILayout.BeginVertical(GuiKit.Box);
             var names = new List<string> { L.T("— ванильные параметры —") };
             names.AddRange(ProfileStore.List(_prefab));
@@ -220,7 +206,6 @@ namespace ValheimArena.UI
             GUILayout.EndVertical();
 
             _editScroll = GuiKit.BeginScroll(_editScroll);
-            // Признак правок — раз за кадр, а не на каждом событии OnGUI.
             var before = !_dirtyHint && UiInput.FirstPass ? JsonIO.ToJson(_work) : null;
             if (Section(0, L.T("Живучесть"))) DrawVitality();
             if (Section(1, L.T("Сопротивления"))) DrawResists();
@@ -256,8 +241,6 @@ namespace ValheimArena.UI
             }
             Arena.Message(vanilla ? L.F("Ванильные параметры возвращены: {0}", n) : L.F("Профиль применён к бойцам: {0}", n));
         }
-
-        // ------------------------------------------------------------------ разделы
 
         private static float Num(string label, float value, float vanilla, string id, string fmt = "0.##")
         {
@@ -411,7 +394,6 @@ namespace ValheimArena.UI
             }
         }
 
-        /// <summary>Источник предмета хранится по-русски (ключ перевода); набор — «набор «имя»».</summary>
         private static string SourceLabel(string source)
         {
             if (string.IsNullOrEmpty(source)) return "";
@@ -420,7 +402,6 @@ namespace ValheimArena.UI
             return L.T(source);
         }
 
-        /// <summary>Пометки атаки: кому она (враг / лечение / поддержка союзников) и где работает.</summary>
         private static string AttackBadges(AttackOverride a)
         {
             if (a.captured < 2) return "";
@@ -543,7 +524,6 @@ namespace ValheimArena.UI
             {
                 float val = d.Get(i);
                 float van = v.Get(i);
-                // Поле, в котором сейчас набирают, не прячется, даже если там пока 0 (иначе «0.5» не набрать).
                 if (!_showZeroDamage && Mathf.Approximately(val, 0f) && Mathf.Approximately(van, 0f) && UiInput.FocusId != p + i) continue;
                 bool changed = Mathf.Abs(val - van) > 0.0001f;
                 GUILayout.Label(changed ? GuiKit.Colored(DamageSet.Labels[i], GuiKit.Accent) : DamageSet.Labels[i], GuiKit.Small, GUILayout.Width(118));

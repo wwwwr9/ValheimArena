@@ -2,19 +2,13 @@ using System.Collections.Generic;
 
 namespace ValheimArena
 {
-    /// <summary>
-    /// Английский перевод интерфейса: ключ — русский текст из исходников (как в L.T/L.F), значение — перевод.
-    /// Подстановки {0}, {1:0.#} в переводе те же, что в ключе. Полноту проверяет PatchCheck.
-    /// </summary>
     internal static class En
     {
         internal static readonly Dictionary<string, string> Strings = new Dictionary<string, string>
         {
-            // Plugin.cs
             ["Патч {0} не применён: {1}"] = "Patch {0} not applied: {1}",
             ["{0} {1} загружен: патчей {2}, ошибок {3}. Меню: {4}, редактор: {5}."] = "{0} {1} loaded: {2} patches, {3} errors. Menu: {4}, editor: {5}.",
 
-            // Core/Arena.cs
             ["не активна"] = "inactive",
             ["Арена развёрнута. Радиус "] = "Arena deployed. Radius ",
             [" м."] = " m.",
@@ -55,16 +49,13 @@ namespace ValheimArena
             [" (чужак)"] = " (intruder)",
             ["Управление временем доступно только в одиночной игре."] = "Time control is only available in single player.",
 
-            // Core/ArenaBoundary.cs
             ["Не найден шейдер для границы арены — кольцо может быть невидимым."] = "The shader for the arena border was not found, so the ring may be invisible.",
 
-            // Core/ArenaCamera.cs
             ["Игрок"] = "Player",
             ["Свободная"] = "Free",
             ["Слежение"] = "Follow",
             ["Некого отслеживать — выпустите бойцов."] = "Nobody to follow; spawn some fighters first.",
 
-            // Core/ArenaCleanup.cs
             ["ничего"] = "nothing",
             ["всё"] = "everything",
             ["существа"] = "creatures",
@@ -79,24 +70,20 @@ namespace ValheimArena
             ["стволов"] = "logs",
             ["убирать было нечего"] = "nothing to remove",
 
-            // Core/ArenaNet.cs
             ["Сетевые вызовы арены уже зарегистрированы: "] = "Arena network calls are already registered: ",
             ["Отправка {0} не удалась: {1}"] = "Sending {0} failed: {1}",
             ["Сообщение арены не разобрано ({0}): {1}"] = "Arena message could not be parsed ({0}): {1}",
             ["Арена игрока {0}: другая версия мода (протокол {1}, у вас {2}) — обновитесь до одной версии."] = "{0}'s arena runs a different mod version (protocol {1}, yours is {2}); all players need the same version.",
 
-            // Core/ArenaSession.cs
             ["подготовка"] = "preparing",
             ["отсчёт"] = "countdown",
             ["бой"] = "fighting",
             ["итоги"] = "finished",
 
-            // Core/ArenaSettings.cs
             ["settings.json не прочитан, взяты умолчания (копия — settings.json.bad): "] = "settings.json could not be read, using defaults (copy saved as settings.json.bad): ",
             ["settings.json не сохранён: "] = "settings.json was not saved: ",
             ["Сценарий {0} не прочитан: {1}"] = "Scenario {0} could not be read: {1}",
 
-            // Core/Hostility.cs
             ["Красные"] = "Red",
             ["Синие"] = "Blue",
             ["Зелёные"] = "Green",
@@ -127,7 +114,6 @@ namespace ValheimArena
             ["Фракция «{0}»"] = "Faction {0}",
             ["Одиночка"] = "Solo",
 
-            // Core/VanillaSpawns.cs
             ["Луга"] = "Meadows",
             ["Чёрный лес"] = "Black Forest",
             ["Болото"] = "Swamp",
@@ -147,12 +133,10 @@ namespace ValheimArena
             ["только ночью"] = "night only",
             ["В игре: "] = "In the game: ",
 
-            // Core/PlayerPresence.cs
             ["Обычная"] = "Normal",
             ["Сквозь существ"] = "Through creatures",
             ["Отключена (заморозка на месте)"] = "Disabled (frozen in place)",
 
-            // Profiles/CreatureProfile.cs
             ["Дробящий"] = "Blunt",
             ["Режущий"] = "Slash",
             ["Колющий"] = "Pierce",
@@ -175,22 +159,18 @@ namespace ValheimArena
             ["Слегка стойкий ×0.75"] = "Slightly resistant ×0.75",
             ["Слегка уязвим ×1.25"] = "Slightly weak ×1.25",
 
-            // Profiles/ProfileLogic.cs
             ["случайное оружие"] = "random weapon",
             ["случайный щит"] = "random shield",
             ["набор «{0}»"] = "set \"{0}\"",
             ["случайный предмет"] = "random item",
 
-            // Profiles/ProfileStore.cs
             ["Профиль {0} не прочитан: {1}"] = "Profile {0} could not be read: {1}",
 
-            // UI/ArenaUI.cs
             ["Таблички над бойцами показаны"] = "Name tags shown",
             ["Таблички над бойцами скрыты"] = "Name tags hidden",
             ["АРЕНА  ·  "] = "ARENA  ·  ",
             ["РЕДАКТОР СУЩЕСТВ"] = "CREATURE EDITOR",
 
-            // UI/EditorWindow.cs
             ["Профили: "] = "Profiles: ",
             ["Только с профилями"] = "With profiles only",
             ["Каталог появится после входа в мир."] = "The catalog appears after entering a world.",
@@ -281,7 +261,6 @@ namespace ValheimArena
             ["нет урона (включите «Показывать нулевые типы», чтобы добавить)"] = "no damage (turn on \"Show zero damage types\" to add some)",
             ["нет"] = "none",
 
-            // UI/MainWindow.cs, UI/EditorWindow.cs (добыча, слабые места, атаки)
             ["Выключено — ни добычи, ни ресурсов из погибших (статуи-жилы гаммельтроллей). Включено — трофеи боссов, положенные на камни, двигают прогресс мира."] = "When off, the fallen leave neither loot nor resources such as the gold-vein statues of gammeltrolls. When on, boss trophies placed on the stones advance world progress.",
             ["Слабое место «{0}»"] = "Weak spot \"{0}\"",
             ["Попадание в слабое место игра считает по его сопротивлениям вместо основных."] = "A hit on a weak spot uses the weak spot's resistances instead of the main ones.",
@@ -322,7 +301,6 @@ namespace ValheimArena
             ["Чистый (мимо сопротивлений)"] = "Pure (ignores resistances)",
             ["Особый (NonPlayer)"] = "Special (NonPlayer)",
 
-            // UI/MainWindow.cs
             ["Авто"] = "Auto",
             ["Арена"] = "Arena",
             ["Бойцы"] = "Fighters",
@@ -555,7 +533,6 @@ namespace ValheimArena
             ["Прожил"] = "Time alive",
             ["Кем убит"] = "Killed by",
 
-            // UI/Overlay.cs
             ["Арена игрока {0}"] = "{0}'s arena",
             [" (заморожен)"] = " (frozen)",
             [" · ВРЕМЯ ОСТАНОВЛЕНО"] = " · TIME STOPPED",

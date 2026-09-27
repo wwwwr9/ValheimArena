@@ -5,28 +5,18 @@ using UnityEngine;
 
 namespace ValheimArena.Core
 {
-    /// <summary>Что убирает «Очистить арену».</summary>
     [Flags]
     public enum ClearWhat
     {
         None = 0,
-        /// <summary>Бойцы арены (выпущенные, призванные, вовлечённые чужаки) и их трупы.</summary>
         Creatures = 1,
-        /// <summary>Ресурсы и предметы на земле: добыча, выпавшие вещи, брёвна-ресурсы.</summary>
         Items = 2,
-        /// <summary>Надгробия игроков (с их вещами).</summary>
         Tombstones = 4,
-        /// <summary>Окаменевшие гаммельтролли (Petrified Gammeltroll — золотая жила Глубокого Севера) и их осколки.</summary>
         Petrified = 8,
-        /// <summary>Упавшие деревья — стволы после рубки или удара.</summary>
         Trees = 16,
         All = Creatures | Items | Tombstones | Petrified | Trees
     }
 
-    /// <summary>
-    /// Очистка площадки внутри границы. Каждый клиент убирает объекты, которыми управляет; хозяин арены ещё и
-    /// забирает себе и убирает остальное (иначе объект, которым никто не управляет, вернулся бы из ZDO).
-    /// </summary>
     public static class ArenaCleanup
     {
         private static readonly AccessTools.FieldRef<ZNetScene, Dictionary<ZDO, ZNetView>> Instances =
@@ -79,11 +69,10 @@ namespace ValheimArena.Core
             return string.Join(", ", parts);
         }
 
-        /// <summary>К какой категории относится сетевой объект (None — не трогаем).</summary>
         private static ClearWhat Classify(ZNetView nview, ZDO zdo)
         {
             var go = nview.gameObject;
-            if (go.GetComponent<Character>()) return ClearWhat.None; // живые — через бойцов арены; дикие и игроки не трогаются
+            if (go.GetComponent<Character>()) return ClearWhat.None;
             if (go.GetComponent<Ragdoll>()) return ClearWhat.Creatures;
             if (go.GetComponent<TombStone>()) return ClearWhat.Tombstones;
             if (go.GetComponent<TreeLog>()) return ClearWhat.Trees;
@@ -92,12 +81,6 @@ namespace ValheimArena.Core
             return ClearWhat.None;
         }
 
-        /// <summary>
-        /// Окаменевший гаммельтролль («Petrified Gammeltroll», $piece_deposit_goldvein). Павший гаммельтролль
-        /// (TrollFrost) оставляет статую TrollFrost_Dead — разрушаемый реквизит без имени-жилы;
-        /// при ударе она распадается на TrollFrost_Frac* — MineRock5 с именем жилы.
-        /// В мире Глубокого Севера они же — DN_gammeltrollFrac01/02.
-        /// </summary>
         private static bool IsPetrified(GameObject go, int depth = 0)
         {
             string prefab = Utils.GetPrefabName(go);
@@ -110,21 +93,17 @@ namespace ValheimArena.Core
             if (mr && mr.m_name == PetrifiedName) return true;
             var hover = go.GetComponent<HoverText>();
             if (hover && hover.m_text == PetrifiedName) return true;
-            // Статуя, которая при разрушении порождает окаменевшие осколки.
             var d = go.GetComponent<Destructible>();
             return depth == 0 && d && d.m_spawnWhenDestroyed && IsPetrified(d.m_spawnWhenDestroyed, 1);
         }
 
-        /// <summary>Убрать выбранное внутри границы арены. Возвращает число убранных объектов по категориям.</summary>
         public static Dictionary<ClearWhat, int> Run(ArenaSession s, ClearWhat what, bool claimOthers)
         {
             var counts = new Dictionary<ClearWhat, int>();
             if (s == null || what == ClearWhat.None || !ZNetScene.instance) return counts;
 
-            // Бойцы — свои всегда; чужих хозяин забирает, если их владелец (например, без мода) сам не уберёт.
             if ((what & ClearWhat.Creatures) != 0)
             {
-                // Бойцы без экземпляра здесь (далеко, вне активной зоны, замороженные без владельца) — по данным мира.
                 int bosses = 0;
                 if (claimOthers && ZDOMan.instance != null)
                 {
@@ -132,7 +111,7 @@ namespace ValheimArena.Core
                     foreach (var zdo in new List<ZDO>(ObjectsById(ZDOMan.instance).Values))
                     {
                         if (!zdo.IsValid() || !zdo.GetBool(UnitHash) || zdo.GetString(SessionHash) != s.Id) continue;
-                        if (ZNetScene.instance.FindInstance(zdo)) continue; // экземпляр уберётся ниже, как боец
+                        if (ZNetScene.instance.FindInstance(zdo)) continue;
                         if (zdo.GetBool(ZDOVars.s_bossCount)) bosses++;
                         zdo.SetOwner(me);
                         ZDOMan.instance.DestroyZDO(zdo);

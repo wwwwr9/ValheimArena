@@ -4,10 +4,6 @@ using UnityEngine;
 
 namespace ValheimArena.Core
 {
-    /// <summary>
-    /// Правила арены, общие для всех игроков: их задаёт хозяин арены, остальные клиенты получают копию
-    /// и применяют к бойцам, которыми управляют сами (владение существом в Valheim переходит между игроками).
-    /// </summary>
     [Serializable]
     public class ArenaRules
     {
@@ -34,7 +30,6 @@ namespace ValheimArena.Core
         public bool freezeBeforeStart = true;
         public bool freezeAfterFinish;
 
-        /// <summary>Гости могут начинать/останавливать бой, очищать арену и выпускать своих бойцов.</summary>
         public bool allowGuests = true;
 
         public static ArenaRules From(ArenaSettings s)
@@ -65,7 +60,6 @@ namespace ValheimArena.Core
             };
         }
 
-        /// <summary>Записать правила в настройки (для показа правил хозяина в окне гостя).</summary>
         public void CopyTo(ArenaSettings s)
         {
             s.radius = radius;
@@ -107,7 +101,6 @@ namespace ValheimArena.Core
         }
     }
 
-    /// <summary>Состояние сессии арены по сети (хозяин → все).</summary>
     [Serializable]
     public class SessionState
     {
@@ -126,7 +119,6 @@ namespace ValheimArena.Core
         public ArenaRules rules = new ArenaRules();
     }
 
-    /// <summary>Строка статистики бойца (хозяин собирает, рассылает гостям).</summary>
     [Serializable]
     public class UnitStat
     {
@@ -154,7 +146,6 @@ namespace ValheimArena.Core
         public List<UnitStat> units = new List<UnitStat>();
     }
 
-    /// <summary>Гибель бойца (владелец погибшего → все).</summary>
     [Serializable]
     public class KillEvent
     {

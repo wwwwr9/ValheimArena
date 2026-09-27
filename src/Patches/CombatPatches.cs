@@ -6,10 +6,6 @@ using ValheimArena.Profiles;
 
 namespace ValheimArena.Patches
 {
-    /// <summary>
-    /// Главный рычаг столкновений: кто кому враг. Решает клиент, который считает ИИ существа (его владелец),
-    /// по правилам арены бойца (они у всех одинаковые) и по настройкам игроков из ZDO их персонажей.
-    /// </summary>
     [HarmonyPatch(typeof(BaseAI), nameof(BaseAI.IsEnemy), new[] { typeof(Character), typeof(Character) })]
     internal static class IsEnemyPatch
     {
@@ -21,7 +17,6 @@ namespace ValheimArena.Patches
 
             if (ua == null && ub == null)
             {
-                // Дикие существа и игрок, которого существа не замечают или не могут задеть (любой игрок, не только свой).
                 bool pa = a.IsPlayer(), pb = b.IsPlayer();
                 if (pa != pb && PlayerPresence.Untouchable((Player)(pa ? a : b)))
                 {
@@ -35,13 +30,11 @@ namespace ValheimArena.Patches
             {
                 if (ua.SessionId == ub.SessionId)
                 {
-                    // Посторонние между собой — как в игре (волк и олень остаются собой).
                     if (ua.Team == 0 && ub.Team == 0 && (HostilityMode)(ua.Rules?.hostilityMode ?? 0) == HostilityMode.Teams)
                         return true;
                     __result = Hostility.UnitsHostile(ua, ub);
                     return false;
                 }
-                // Бойцы разных арен друг другу посторонние.
                 if (Isolated(ua) || Isolated(ub))
                 {
                     __result = false;
@@ -61,7 +54,6 @@ namespace ValheimArena.Patches
                     __result = false;
                     return false;
                 }
-                // Правила чужой арены ещё не пришли — ведём себя как игра.
                 if (unit.Rules == null) return true;
                 __result = Hostility.UnitVsPlayer(unit, player, unitIsSeeker: ua != null);
                 return false;
@@ -78,7 +70,6 @@ namespace ValheimArena.Patches
         private static bool Isolated(ArenaUnit u) => u.Rules?.isolateOutsiders ?? true;
     }
 
-    /// <summary>Гуманоиды получают атаки-предметы в Start — тогда же применяем профиль атак.</summary>
     [HarmonyPatch(typeof(Humanoid), "Start")]
     internal static class HumanoidStartPatch
     {
@@ -89,7 +80,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>Отключённые в редакторе атаки ИИ не использует.</summary>
     [HarmonyPatch(typeof(BaseAI), nameof(BaseAI.CanUseAttack))]
     internal static class CanUseAttackPatch
     {
@@ -101,7 +91,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>Заморозка ИИ до старта, на паузе и (по желанию) после итога.</summary>
     [HarmonyPatch(typeof(MonsterAI), nameof(MonsterAI.UpdateAI))]
     internal static class MonsterUpdateAIPatch
     {
@@ -136,7 +125,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>Неуязвимость наблюдателя, дружественный огонь, множители урона профиля.</summary>
     [HarmonyPatch(typeof(Character), "RPC_Damage")]
     internal static class RpcDamagePatch
     {
@@ -146,12 +134,9 @@ namespace ValheimArena.Patches
             Character attackerCh = hit.GetAttacker();
             if (__instance == Player.m_localPlayer)
             {
-                // Неуязвимость — никакого урона, ошеломления и отбрасывания; «сквозь существ» / «не реагируют» —
-                // удары существ проходят мимо (урон по персонажу считает его собственный клиент).
                 if (PlayerPresence.Invulnerable) return false;
                 if (PlayerPresence.CreatureCannotHit(Player.m_localPlayer, attackerCh)) return false;
             }
-            // И наоборот: оружие игрока-«призрака» существ не задевает.
             else if (!__instance.IsPlayer() && attackerCh is Player ap && PlayerPresence.Untouchable(ap))
             {
                 return false;
@@ -164,12 +149,10 @@ namespace ValheimArena.Patches
             if (victim != null && attacker != null && victim != attacker && victim.SessionId == attacker.SessionId
                 && !(victim.Rules?.friendlyFire ?? true))
             {
-                // Лечение и усиление союзника игра доставляет тем же ударом — без урона, с эффектом; его пропускаем.
                 bool support = hit.GetTotalDamage() <= 0.1f && hit.m_statusEffectHash != 0;
                 if (!support && !Hostility.UnitsHostile(attacker, victim) && !Hostility.UnitsHostile(victim, attacker))
                     return false;
             }
-            // Modify, а не HitData.ApplyModifier: тот не трогает общий урон и урон «только по не-игрокам».
             if (attacker != null && Mathf.Abs(attacker.DamageDealtMultiplier - 1f) > 0.0001f)
                 hit.m_damage.Modify(attacker.DamageDealtMultiplier);
             if (victim != null && Mathf.Abs(victim.DamageTakenMultiplier - 1f) > 0.0001f)
@@ -179,10 +162,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>
-    /// Урон мимо RPC_Damage: горение, яд, дым, стоимость атак здоровьем. Неуязвимого персонажа он не трогает,
-    /// а горение/яд от существ — и того, кого существа задеть не могут.
-    /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.ApplyDamage))]
     [HarmonyPriority(Priority.High)]
     internal static class PlayerApplyDamageGuard
@@ -195,7 +174,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>Снаряды существ пролетают сквозь игрока, которого существа задеть не могут.</summary>
     [HarmonyPatch(typeof(Projectile), "IsValidTarget")]
     internal static class ProjectileGhostPatch
     {
@@ -206,7 +184,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>Учёт нанесённого урона для статистики.</summary>
     [HarmonyPatch(typeof(Character), nameof(Character.ApplyDamage))]
     internal static class ApplyDamagePatch
     {
@@ -223,10 +200,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>
-    /// Кто наложил горение, яд или урон духом: тики этих эффектов игра наносит без атакующего, и без памяти урон
-    /// не засчитывался бы бойцу, а убийцей добитого эффектом стала бы «стихия».
-    /// </summary>
     internal static class DotAttribution
     {
         private const float Memory = 20f;
@@ -256,11 +229,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>
-    /// «Оставлять добычу» выключено — добыча не выпадает и через рэгдолл. Игра выключает CharacterDrop только после
-    /// того, как рэгдолл запомнил список (Ragdoll.SaveLootList → GenerateDropList), поэтому флаг проверяется в самом
-    /// списке. Ванильно список строится только при включённой добыче — других вызывающих нет.
-    /// </summary>
     [HarmonyPatch(typeof(CharacterDrop), nameof(CharacterDrop.GenerateDropList))]
     internal static class DropListPatch
     {
@@ -275,11 +243,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>
-    /// Облик по звёздам: игра задаёт его только для 1★ и 2★ и при уровне выше заданных возвращает обычный облик —
-    /// 5★ выглядел бы как 0★. Выше заданного — облик последней звезды. Только у бойцов арены: облик диких существ
-    /// с большими звёздами (их дают другие моды) остаётся за игрой и этими модами.
-    /// </summary>
     [HarmonyPatch(typeof(LevelEffects), nameof(LevelEffects.SetupLevelVisualization))]
     internal static class LevelLookPatch
     {
@@ -292,10 +255,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>
-    /// Правило «Урон не зависит от числа игроков рядом»: внутри живой арены множители игры за игроков в 100 м
-    /// (удары существ ×(1 + 0,04 на игрока), урон по существам ÷(1 + 0,3 на игрока)) равны единице.
-    /// </summary>
     internal static class PlayerScaling
     {
         public static bool Neutral(Vector3 pos)
@@ -334,13 +293,10 @@ namespace ValheimArena.Patches
         private static void Prefix(Character __instance, out bool __state)
         {
             __state = false;
-            // Смерть с анимацией: событие анимации вызывает OnDeath у каждого клиента, где она играет (игра сама
-            // выходит у не-владельца). Гибель сообщает только владелец — у него есть последний удар и убийца.
             var u = ArenaUnit.Get(__instance);
             if (u == null || !u.IsOwner) return;
             var last = Reflect.LastHit(__instance);
             Arena.OnDeath(__instance, DotAttribution.Resolve(__instance, last?.GetAttacker()));
-            // Существа, которых порождает смерть (m_deathEffects: деление слизней и т.п.), — на сторону погибшего.
             __state = SpawnContext.Push(__instance);
         }
 
@@ -351,10 +307,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>
-    /// AoE по умолчанию не бьёт существ с тем же именем, что у владельца (m_hitSame) и бьёт союзников
-    /// (m_hitFriendly). На арене «тролль против тролля» это ломает бой, поэтому решаем по командам.
-    /// </summary>
     [HarmonyPatch(typeof(Aoe), "ShouldHit")]
     internal static class AoeShouldHitPatch
     {
@@ -366,7 +318,6 @@ namespace ValheimArena.Patches
             if (!go) return;
             var target = go.GetComponent<Character>();
             if (!target || target == owner) return;
-            // Площадной удар существа не задевает игрока «сквозь существ» / без реакции существ.
             if (__result && target is Player tp && PlayerPresence.CreatureCannotHit(tp, owner))
             {
                 __result = false;
@@ -390,7 +341,6 @@ namespace ValheimArena.Patches
                     && !(__instance.m_dodgeable && target.IsDodgeInvincible()))
                     __result = true;
             }
-            // Без дружественного огня союзника не задевает удар по врагам; площадь «для своих» (лечение, щит) — задевает.
             else if (!s.friendlyFire && __instance.m_hitEnemy)
             {
                 __result = false;
@@ -398,7 +348,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>Собственный урон эффектов (AoE) из профиля бойца.</summary>
     [HarmonyPatch(typeof(Aoe), nameof(Aoe.Setup))]
     internal static class AoeSetupPatch
     {
@@ -413,10 +362,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>
-    /// Правка эффекта записана под именем префаба, у которого нашёлся Aoe/Projectile (он может висеть на дочернем
-    /// объекте) — ищем от объекта компонента вверх до корня.
-    /// </summary>
     internal static class EffectKey
     {
         public static bool Find(ArenaUnit u, Component c, out EffectOverride fx)

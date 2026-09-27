@@ -12,21 +12,15 @@ namespace ValheimArena.Core
     public enum Placement { TeamSide = 0, Random = 1, Center = 2, CameraAim = 3 }
     public enum FollowStyle { Orbit = 0, Chase = 1, TopDown = 2 }
 
-    /// <summary>Поведение бойцов в бою.</summary>
     public enum ArenaBehavior
     {
-        /// <summary>Всегда знает, где враги на арене, и идёт к ним.</summary>
         Hunt = 0,
-        /// <summary>Стоит на месте: разворачивается и бьёт тех, кто подошёл на дистанцию атаки.</summary>
         Hold = 1,
-        /// <summary>Как в игре: видит своими глазами, бродит у точки появления, боссы держатся «алтаря».</summary>
         Free = 2
     }
 
-    /// <summary>Что делать с существами, которые не выпущены на арену, но оказались внутри границы.</summary>
     public enum IntruderPolicy { Ignore = 0, Involve = 1, Remove = 2 }
 
-    /// <summary>Группа в составе арены: какой прототип, сколько, каких звёзд, за какую сторону.</summary>
     [Serializable]
     public class SpawnGroup
     {
@@ -35,49 +29,37 @@ namespace ValheimArena.Core
         public int starsMin;
         public int starsMax;
         public int team = 1;
-        /// <summary>-1 — фракция прототипа.</summary>
         public int factionOverride = -1;
-        /// <summary>Имя профиля из редактора существ; пусто — ванильные параметры.</summary>
         public string profile = "";
         public int placement = (int)Placement.TeamSide;
         public float spread = 4f;
-        /// <summary>-1 — как у арены, иначе <see cref="ArenaBehavior"/>.</summary>
         public int behavior = -1;
 
         public SpawnGroup Clone() => (SpawnGroup)MemberwiseClone();
     }
 
-    /// <summary>Все настраиваемые параметры арены. Сохраняются в settings.json, сценарии — копии этого объекта.</summary>
     [Serializable]
     public class ArenaSettings
     {
-        // --- Границы
         public float radius = 30f;
         public int shape = (int)BoundaryShape.Circle;
         public int boundaryMode = (int)BoundaryMode.Wall;
         public bool showBoundary = true;
         public bool boundaryAffectsPlayer;
-        /// <summary>Потолок над землёй для летающих; 0 — без потолка.</summary>
         public float heightLimit;
-        /// <summary>Крейсерская высота летунов над землёй; 0 — по существу и его атакам.</summary>
         public float flyHeight;
 
-        // --- Столкновения
         public int hostilityMode = (int)HostilityMode.Teams;
         public bool[] teamMatrix = new bool[Hostility.TeamCount * Hostility.TeamCount];
         public bool[] factionMatrix = new bool[0];
         public bool friendlyFire;
         public bool aoeHitsSameKind = true;
-        /// <summary>Урон на арене не зависит от числа игроков рядом (игра меняет его в радиусе 100 м).</summary>
         public bool ignorePlayerScaling = true;
         public bool isolateOutsiders = true;
-        /// <summary>0 — игрок вне команд (враг всем, если существа на него реагируют).</summary>
         public int playerTeam;
 
-        /// <summary>Сетевая игра: гости могут начинать/останавливать бой, очищать арену и выпускать своих бойцов.</summary>
         public bool allowGuests = true;
 
-        // --- Поведение бойцов
         public int behavior = (int)ArenaBehavior.Hunt;
         public int intruders = (int)IntruderPolicy.Involve;
         public bool noFlee = true;
@@ -86,7 +68,6 @@ namespace ValheimArena.Core
         public bool dropLoot;
         public bool cleanupOrphans = true;
 
-        // --- Что убирает «Очистить арену» (true — убрать, false — оставить)
         public bool clearCreatures = true;
         public bool clearItems;
         public bool clearTombstones;
@@ -97,13 +78,11 @@ namespace ValheimArena.Core
         public bool autoStart;
         public float countdown = 3f;
 
-        // --- Персонаж
         public bool playerVisible = true;
         public int playerCollision = (int)CollisionMode.Normal;
         public bool creaturesReact = true;
         public bool playerInvulnerable;
 
-        // --- Камера
         public float freeCamSpeed = 12f;
         public int followStyle = (int)FollowStyle.Orbit;
         public float followDistanceScale = 1f;
@@ -113,14 +92,12 @@ namespace ValheimArena.Core
         public bool limitCamera = true;
         public float cameraFov = 65f;
 
-        // --- Оверлей
         public bool overlay = true;
         public bool nameTags = true;
         public bool hpBars = true;
         public bool killFeed = true;
         public float tagDistance = 90f;
 
-        // --- Состав
         public List<SpawnGroup> roster = new List<SpawnGroup>();
 
         public void EnsureValid()
@@ -170,14 +147,9 @@ namespace ValheimArena.Core
             }
         }
 
-        /// <summary>Clamp, который не пропускает NaN и бесконечность (Mathf.Clamp возвращает NaN как есть).</summary>
         private static float Clamp(float v, float min, float max, float fallback) =>
             float.IsNaN(v) || float.IsInfinity(v) ? fallback : Mathf.Clamp(v, min, max);
 
-        /// <summary>
-        /// Личное — персонаж, камера, оверлей, уборка сирот: сценарий их не меняет, иначе загрузка чужого сценария
-        /// у арены с боссом молча сняла бы, например, неуязвимость.
-        /// </summary>
         public void CopyPersonalFrom(ArenaSettings s)
         {
             boundaryAffectsPlayer = s.boundaryAffectsPlayer;
@@ -228,7 +200,6 @@ namespace ValheimArena.Core
             }
             catch (Exception e)
             {
-                // Испорченный файл не затирается умолчаниями при выходе — остаётся рядом копией.
                 try { File.Copy(SettingsPath, SettingsPath + ".bad", true); } catch { }
                 ArenaPlugin.Log.LogWarning(L.T("settings.json не прочитан, взяты умолчания (копия — settings.json.bad): ") + e.Message);
                 Current = new ArenaSettings();
@@ -248,7 +219,6 @@ namespace ValheimArena.Core
             }
         }
 
-        /// <summary>Запись через временный файл: падение посреди записи не оставляет обрезанный JSON.</summary>
         public static void WriteAtomic(string path, string text)
         {
             string tmp = path + ".tmp";

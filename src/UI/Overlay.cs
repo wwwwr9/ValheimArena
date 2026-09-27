@@ -3,7 +3,6 @@ using ValheimArena.Core;
 
 namespace ValheimArena.UI
 {
-    /// <summary>Боевой HUD: таблички над бойцами, счёт сторон, отсчёт, итог, лента убийств, карточка цели.</summary>
     public static class Overlay
     {
         private static GUIStyle _result, _resultShadow, _feed, _feedShadow, _hint, _hintShadow;
@@ -56,7 +55,6 @@ namespace ValheimArena.UI
                 bool focused = ArenaCamera.Target == u && ArenaCamera.Mode == CameraMode.Follow;
                 Color c = Hostility.UnitColor(u);
                 string text = GuiKit.Colored((focused ? "▶ " : "") + Arena.Label(u), c);
-                // Без владельца игра существо прячет и не считает (вне активной зоны всех игроков).
                 if (!u.NView.GetZDO().HasOwner()) text += GuiKit.Colored(L.T(" (заморожен)"), GuiKit.MutedColor);
                 var r = new Rect(x - 110f, y - 34f, 220f, 18f);
                 GuiKit.ShadowLabel(r, text, GuiKit.TagLabel, GuiKit.TagShadow);

@@ -19,7 +19,6 @@ namespace ValheimArena
         internal static ArenaPlugin Instance;
         internal static ManualLogSource Log;
 
-        /// <summary>BepInEx\config\ValheimArena — настройки, профили существ, сценарии.</summary>
         internal static string DataDir;
 
         internal static ConfigEntry<UiLanguage> Language;
@@ -47,7 +46,6 @@ namespace ValheimArena
             BindConfig();
             ArenaSettingsStore.Load();
 
-            // Патчи по одному: если обновление игры переименует метод, отвалится только его функция, а не весь мод.
             _harmony = new Harmony(Guid);
             int ok = 0, failed = 0;
             foreach (var type in AccessTools.GetTypesFromAssembly(typeof(ArenaPlugin).Assembly))
@@ -67,10 +65,6 @@ namespace ValheimArena
             Log.LogInfo(L.F("{0} {1} загружен: патчей {2}, ошибок {3}. Меню: {4}, редактор: {5}.", ModName, Version, ok, failed, KeyMenu.Value, KeyEditor.Value));
         }
 
-        /// <summary>
-        /// Настройки cfg. Имена разделов и ключей постоянные (по ним BepInEx находит значения), описания — на двух
-        /// языках сразу: файл читают до выбора языка. PatchCheck этот метод в проверке перевода пропускает.
-        /// </summary>
         private void BindConfig()
         {
             Language = Config.Bind("Interface", "Language", UiLanguage.English,
@@ -84,7 +78,6 @@ namespace ValheimArena
             KeyMenu = Config.Bind("Keys", "Arena menu", KeyCode.F7, "Open/close the arena menu. / Открыть/закрыть меню арены.");
             KeyEditor = Config.Bind("Keys", "Creature editor", KeyCode.F8, "Open/close the creature editor. / Открыть/закрыть редактор существ.");
             KeyCamera = Config.Bind("Keys", "Camera mode", KeyCode.F3, "Player camera → free → follow. / Камера игрока → свободная → слежение.");
-            // F9, клавиша камеры до 1.3.1, в игре переключает раскладку геймпада: сохранённое значение переносится на F3.
             if (KeyCamera.Value == KeyCode.F9) KeyCamera.Value = KeyCode.F3;
             KeyFight = Config.Bind("Keys", "Start or pause fight", KeyCode.F6, "Deploy the arena, start, pause or resume the fight. / Развернуть арену, начать бой, пауза, продолжить.");
             KeyNextTarget = Config.Bind("Keys", "Next target", KeyCode.RightBracket, "Follow camera: next fighter. / Слежение: следующий боец.");

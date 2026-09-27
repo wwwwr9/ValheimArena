@@ -4,12 +4,6 @@ using ValheimArena.Profiles;
 
 namespace ValheimArena.Core
 {
-    /// <summary>
-    /// Боец арены. Вешается на существо при появлении; всё, что нужно после перезагрузки мира или на другом
-    /// клиенте, лежит в ZDO (ключи va_*), поэтому компонент восстанавливается из Character.Awake у любого игрока с модом,
-    /// а метка, поставленная уже после появления существа, подхватывается ежесекундной сверкой (<see cref="SyncWithZdo"/>).
-    /// Правила берутся из сессии его арены (<see cref="Session"/>), а не из локальных настроек клиента.
-    /// </summary>
     public class ArenaUnit : MonoBehaviour
     {
         public const string ZUnit = "va_unit";
@@ -24,12 +18,9 @@ namespace ValheimArena.Core
         public const string ZBehavior = "va_behavior";
         public const string ZOrigin = "va_origin";
         public const string ZAdopted = "va_adopted";
-        /// <summary>Максимум HP бойца по профилю и уровню (см. ProfileLogic.RecalculateHealth).</summary>
         public const string ZMaxHealth = "va_maxhp";
-        /// <summary>Флаги мира вовлечённого существа до арены: 1 — охотится на игроков, 2 — исчезает днём, 4 — из набега.</summary>
         public const string ZWorldFlags = "va_wflags";
 
-        /// <summary>Как боец попал на арену.</summary>
         public const int Spawned = 0, Summoned = 1, Intruder = 2;
 
         private const string RpcSetProfile = "VA_SetProfile";
@@ -66,15 +57,11 @@ namespace ValheimArena.Core
         public float OrphanSince = -1f;
         public bool AlertPending;
 
-        /// <summary>-1 — поведение арены, иначе <see cref="ArenaBehavior"/> группы.</summary>
         public int BehaviorOverride = -1;
-        /// <summary>Место появления — «алтарь» бойца: вокруг него он бродит без цели, от него считается поводок.</summary>
         public Vector3 Origin;
         public int Adopted;
-        /// <summary>Летает по прототипу (Character.m_flying у свежего экземпляра).</summary>
         public bool PrefabFlies;
         public float GroundedFor;
-        /// <summary>Дальность зрения по прототипу/профилю — к ней возвращается «свободное» поведение.</summary>
         public float BaseViewRange;
         private float _originalMaxChase;
         private bool _originalFleeIfHurt, _originalFleeIfNotAlerted, _originalAttackPlayerObjects;
@@ -98,7 +85,6 @@ namespace ValheimArena.Core
 
         public bool IsOwner => NView && NView.IsValid() && NView.IsOwner();
 
-        /// <summary>Сессия арены бойца (кэш сбрасывается при любом изменении списка сессий).</summary>
         public ArenaSession Session
         {
             get
@@ -149,12 +135,6 @@ namespace ValheimArena.Core
             return u;
         }
 
-        /// <summary>
-        /// Раз в секунду из Arena: сверить компоненты бойцов с метками в ZDO. Метку ставит владелец существа
-        /// (вовлечь чужака, принять призыв), а из Character.Awake компонент получают только те, кто уже пришёл
-        /// с меткой; боец, вовлечённый другим игроком, получает компонент здесь, вместе с табличкой, командой,
-        /// правилами арены и учётом в итоге. Снятая владельцем метка (отпущенный чужак) так же снимает компонент у всех.
-        /// </summary>
         public static void SyncWithZdo()
         {
             foreach (var c in Character.GetAllCharacters())
@@ -170,7 +150,6 @@ namespace ValheimArena.Core
             }
         }
 
-        /// <summary>Из Character.Awake и сверки: если в ZDO есть метка арены — восстановить бойца.</summary>
         public static void TryAttachFromZdo(Character c)
         {
             if (!c || c.IsPlayer()) return;
@@ -181,7 +160,6 @@ namespace ValheimArena.Core
             Attach(c);
         }
 
-        /// <summary>Создать/обновить компонент по данным ZDO и применить настройки арены и профиля.</summary>
         public static ArenaUnit Attach(Character c)
         {
             var unit = c.GetComponent<ArenaUnit>();
@@ -199,7 +177,6 @@ namespace ValheimArena.Core
             Monster = AI as MonsterAI;
             var zdo = NView.GetZDO();
             PrefabName = zdo.GetString(ZPrefab, Utils.GetPrefabName(c.gameObject));
-            // Команда 0 — посторонние, вовлечённые в бой (враги всем командам).
             Team = Mathf.Clamp(zdo.GetInt(ZTeam, 1), 0, Hostility.TeamCount);
             Group = zdo.GetInt(ZGroup, 0);
             FactionOverride = zdo.GetInt(ZFaction, -1);
@@ -231,7 +208,6 @@ namespace ValheimArena.Core
                     _originalFallAsleepDistance = Monster.m_fallAsleepDistance;
                 }
                 _originalDeathEffects = c.m_deathEffects?.m_effectPrefabs;
-                // Смену профиля с чужого клиента выполняет владелец существа (он же пишет ZDO).
                 NView.Register<string>(RpcSetProfile, RPC_SetProfile);
             }
 
@@ -244,14 +220,11 @@ namespace ValheimArena.Core
 
             c.m_faction = FactionOverride >= 0 ? (Character.Faction)FactionOverride : OriginalFaction;
 
-            // Бойцы арены не двигают прогресс мира и не выдают катсцены — у любого клиента, который ими владеет.
             c.m_defeatSetGlobalKey = "";
             c.m_dreamCinematic = "";
 
-            // Character.Awake уже выставил максимум HP по ванильному m_health — пересчитываем с сохранением доли.
             SyncProfileFromZdo(force: true);
 
-            // При восстановлении из Character.Awake компоненты ИИ ещё не прошли Awake — поведение настраивается в Start.
             if (_started) ApplyArenaBehaviour();
             TryApplyItems();
         }
@@ -263,7 +236,6 @@ namespace ValheimArena.Core
             if (!ItemsApplied) TryApplyItems();
         }
 
-        /// <summary>Профиль в ZDO поменялся (его сменил владелец) — применить у себя: размер, HP, атаки.</summary>
         public void SyncProfileFromZdo(bool force)
         {
             if (!NView || !NView.IsValid()) return;
@@ -282,23 +254,16 @@ namespace ValheimArena.Core
             {
                 ResetToVanilla();
             }
-            // Профиль переписал зрение и скорости — вернуть поправки режима поведения.
             if (_started) ApplyArenaBehaviour();
         }
 
-        /// <summary>
-        /// Поведение по правилам арены: не бежать, не ломать постройки, не спать; режим «идёт к врагам / стоит /
-        /// свободно». Повторяется при смене правил.
-        /// </summary>
         public void ApplyArenaBehaviour()
         {
             var r = Rules;
             _behaviourVersion = Arena.SessionsVersion;
-            // Добыча бойца — только по правилу арены; пока правила не пришли, её нет.
             var drop = GetComponent<CharacterDrop>();
             bool loot = r != null && r.dropLoot;
             if (drop) drop.SetDropsEnabled(loot);
-            // Без добычи — и без того, что выпадает при гибели эффектом: ресурсы (статуя-жила гаммельтролля), предметы.
             if (Character && Character.m_deathEffects != null && _originalDeathEffects != null)
                 Character.m_deathEffects.m_effectPrefabs = loot ? _originalDeathEffects : WithoutLoot(_originalDeathEffects);
             if (r == null) return;
@@ -306,28 +271,23 @@ namespace ValheimArena.Core
 
             if (AI)
             {
-                // Свободное поведение — со своим зрением; остальные видят арену целиком.
                 float need = r.radius * 2.2f + 10f;
                 AI.m_viewRange = behavior == ArenaBehavior.Free ? BaseViewRange : Mathf.Max(BaseViewRange, need);
-                // «Алтарь» бойца — место его появления: вокруг него он бродит без цели, от него считается поводок.
                 Reflect.SpawnPoint(AI) = Origin;
                 if (IsOwner)
                 {
                     AI.SetHuntPlayer(false);
-                    // Приручённый с точкой патруля бросает цель дальше m_alertRange от неё (MonsterAI) — в бою без патруля.
                     if (Character.IsTamed() && behavior != ArenaBehavior.Free) AI.ResetPatrolPoint();
                     else Reflect.SetPatrolPoint(AI, Origin);
                 }
             }
             if (Monster)
             {
-                // Выключенное правило возвращает ванильное (или профильное) поведение, а не оставляет прежнее.
                 Monster.m_attackPlayerObjects = !r.noBuildingAttacks && _originalAttackPlayerObjects;
                 Monster.m_fleeIfHurtWhenTargetCantBeReached = !r.noFlee && _originalFleeIfHurt;
                 Monster.m_fleeIfNotAlerted = !r.noFlee && _originalFleeIfNotAlerted;
                 Monster.m_fleeIfLowHealth = r.noFlee ? 0f
                     : Profile != null && Profile.hasMonsterAI ? Profile.fleeIfLowHealth : _originalFleeIfLowHealth;
-                // Поводок боссов (m_maxChaseDistance) остаётся только у свободного поведения — как у алтаря в игре.
                 Monster.m_maxChaseDistance = behavior == ArenaBehavior.Free ? _originalMaxChase : 0f;
                 Monster.m_fallAsleepDistance = r.wakeSleepers ? 0f : _originalFallAsleepDistance;
                 if (IsOwner)
@@ -352,7 +312,6 @@ namespace ValheimArena.Core
             return list.ToArray();
         }
 
-        /// <summary>Раз в секунду из Arena: догнать смену правил и профиля.</summary>
         public void Refresh()
         {
             if (_started && _behaviourVersion != Arena.SessionsVersion) ApplyArenaBehaviour();
@@ -368,10 +327,6 @@ namespace ValheimArena.Core
             ItemsApplied = true;
         }
 
-        /// <summary>
-        /// Сменить профиль живому бойцу (из редактора). null — вернуть ванильные параметры.
-        /// Чужому бойцу команда уходит владельцу; остальные клиенты подхватят профиль из ZDO.
-        /// </summary>
         public void SetProfile(CreatureProfile p)
         {
             string json = p != null ? ProfileStore.ToJson(p) : "";
@@ -414,10 +369,6 @@ namespace ValheimArena.Core
             return DisabledAttacks.Contains(ProfileLogic.ItemKey(item));
         }
 
-        /// <summary>
-        /// Флаги мира, которые арена у бойца снимает (охота на игроков, исчезновение днём, набег) — запомнить
-        /// до вовлечения, чтобы отпущенный чужак снова стал ночным волком или участником набега, а не остался навсегда.
-        /// </summary>
         public static void RememberWorldFlags(Character c, ZDO zdo)
         {
             var ai = c.GetComponent<BaseAI>();
@@ -426,10 +377,6 @@ namespace ValheimArena.Core
             zdo.Set(ZWorldFlags, flags);
         }
 
-        /// <summary>
-        /// Отпустить вовлечённого постороннего (арена исчезла): снять метку арены (это делает владелец, остальные
-        /// клиенты снимают компонент по метке), вернуть фракцию, ключ победы, флаги мира, поведение и добычу.
-        /// </summary>
         public void Release()
         {
             if (IsOwner)
@@ -450,7 +397,6 @@ namespace ValheimArena.Core
                     }
                 }
             }
-            // Профиль, применённый к чужаку из редактора, не уходит с ним в мир.
             if (Profile != null && Character) ResetToVanilla();
             if (Character)
             {
@@ -477,7 +423,6 @@ namespace ValheimArena.Core
 
         private void OnDestroy()
         {
-            // Ключ — та же C#-ссылка, поэтому удаление работает и для уже уничтоженного Character.
             if ((object)Character != null) ByCharacter.Remove(Character);
             if ((object)AI != null) ByAI.Remove(AI);
             All.Remove(this);
