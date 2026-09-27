@@ -5,11 +5,6 @@ using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
-/// <summary>
-/// Сверка Harmony-патчей мода с текущими сборками игры: существуют ли целевые методы и поля,
-/// однозначна ли перегрузка, есть ли у целевого метода параметры, которые запрашивают префиксы/постфиксы.
-/// Запускается из build.ps1; после обновления Valheim покажет, что именно разошлось.
-/// </summary>
 internal static class Program
 {
     private static readonly List<ModuleDefinition> GameModules = new List<ModuleDefinition>();
@@ -51,10 +46,6 @@ internal static class Program
         return _errors == 0 ? 0 : 1;
     }
 
-    /// <summary>
-    /// Перевод интерфейса: у каждой русской строки кода мода есть английская в En.Strings (ключ — ldstr перед
-    /// значением в инициализаторе словаря). Двуязычные описания настроек (ArenaPlugin.BindConfig) не переводятся.
-    /// </summary>
     private static int CheckLocalization(ModuleDefinition mod)
     {
         var en = mod.GetTypes().FirstOrDefault(t => t.Namespace == "ValheimArena" && t.Name == "En");
@@ -99,7 +90,6 @@ internal static class Program
         {
             var t = m.GetType(fullName);
             if (t != null) return t;
-            // Вложенные типы: A/B
             t = m.GetTypes().FirstOrDefault(x => x.FullName == fullName);
             if (t != null) return t;
         }
@@ -147,10 +137,6 @@ internal static class Program
 
     private static string StripRef(TypeReference t) => t.FullName.TrimEnd('&');
 
-    /// <summary>
-    /// AccessTools.FieldRefAccess&lt;T,F&gt;("поле"), AccessTools.Field(typeof(T), "поле") и
-    /// AccessTools.Method(typeof(T), "метод"[, new[] { типы параметров }]).
-    /// </summary>
     private static int CheckReflectionCalls(TypeDefinition owner, MethodDefinition m)
     {
         int count = 0;
@@ -175,7 +161,6 @@ internal static class Program
             }
             else if (call.Name == "Field" && call.Parameters.Count == 2)
             {
-                // ldtoken T; call GetTypeFromHandle; ldstr "name"; call Field
                 string name = PrevString(ins, i);
                 var typeRef = PrevToken(ins, i - 1, 4);
                 if (name == null || typeRef == null) continue;
@@ -187,7 +172,6 @@ internal static class Program
             }
             else if (call.Name == "Method")
             {
-                // ldtoken T; call GetTypeFromHandle; ldstr "name"; [newarr Type; (ldtoken P; …; stelem.ref)*]; call Method
                 string name = null;
                 TypeReference typeRef = null;
                 int nameAt = -1;
@@ -195,7 +179,6 @@ internal static class Program
                     if (ins[k].OpCode == OpCodes.Ldstr) { name = (string)ins[k].Operand; nameAt = k; break; }
                 if (nameAt >= 0) typeRef = PrevToken(ins, nameAt, 3);
                 if (name == null || typeRef == null) continue;
-                // Типы параметров — ldtoken между именем и вызовом, если после имени создан массив.
                 List<string> sig = null;
                 for (int k = nameAt + 1; k < i; k++)
                 {
@@ -210,7 +193,6 @@ internal static class Program
                 if (overloads.Count == 0) Fail($"Method: метод {label} не найден");
                 else if (sig != null && !HasOverload(t, name, sig))
                     Fail($"Method: у {t.Name}.{name} нет перегрузки ({string.Join(", ", sig)})");
-                // Без типов AccessTools.Method при нескольких перегрузках бросает AmbiguousMatchException.
                 else if (sig == null && overloads.Count > 1) Fail($"Method: {label} — перегрузка неоднозначна, укажите типы параметров");
                 else Console.WriteLine($"  ok  метод {label}");
             }
@@ -232,7 +214,6 @@ internal static class Program
         return null;
     }
 
-    /// <summary>Перегрузки метода в ближайшем типе иерархии, где метод с таким именем объявлен (как ищет AccessTools).</summary>
     private static List<MethodDefinition> FindMethods(TypeDefinition t, string name)
     {
         for (var cur = t; cur != null; cur = cur.BaseType?.Resolve())
@@ -243,7 +224,6 @@ internal static class Program
         return new List<MethodDefinition>();
     }
 
-    /// <summary>Перегрузка с этими типами параметров где-либо в иерархии (AccessTools идёт к базовым типам).</summary>
     private static bool HasOverload(TypeDefinition t, string name, List<string> sig)
     {
         for (var cur = t; cur != null; cur = cur.BaseType?.Resolve())
@@ -261,5 +241,4 @@ internal static class Program
         }
         return null;
     }
-
 }

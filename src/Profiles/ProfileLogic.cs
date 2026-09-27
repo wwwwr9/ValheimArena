@@ -5,13 +5,10 @@ using ValheimArena.Core;
 
 namespace ValheimArena.Profiles
 {
-    /// <summary>Снятие параметров с прототипа и применение профиля к живому бойцу.</summary>
     public static class ProfileLogic
     {
         private static readonly MethodInfo MemberwiseCloneMethod =
             typeof(object).GetMethod("MemberwiseClone", BindingFlags.Instance | BindingFlags.NonPublic);
-
-        // ------------------------------------------------------------------ снятие с прототипа
 
         public static CreatureProfile Capture(GameObject prefab)
         {
@@ -91,10 +88,6 @@ namespace ValheimArena.Profiles
             return p;
         }
 
-        /// <summary>
-        /// Ключи слабых мест по порядку: имя объекта, а у повторившегося имени — с номером («Имя #2»), чтобы
-        /// одноимённые места с разными сопротивлениями не сливались в одно.
-        /// </summary>
         public static List<string> WeakSpotKeys(IEnumerable<WeakSpot> spots)
         {
             var keys = new List<string>();
@@ -115,7 +108,6 @@ namespace ValheimArena.Profiles
             return s.m_attack != null && item.IsWeapon();
         }
 
-        /// <summary>Все предметы, которые гуманоид может получить при появлении, с подписью источника.</summary>
         public static IEnumerable<KeyValuePair<GameObject, string>> EnumerateItemPrefabs(Humanoid h)
         {
             if (h.m_defaultItems != null)
@@ -189,10 +181,6 @@ namespace ValheimArena.Profiles
             return a;
         }
 
-        /// <summary>
-        /// Эффекты с собственным уроном, которые атака может породить (AoE-удары, взрывы, лужи, осколки).
-        /// Глубина — два уровня (атака → снаряд → то, что он порождает при попадании).
-        /// </summary>
         public static List<EffectOverride> ScanEffects(ItemDrop.ItemData.SharedData s)
         {
             var result = new List<EffectOverride>();
@@ -209,14 +197,12 @@ namespace ValheimArena.Profiles
             return result;
         }
 
-        /// <param name="inheritsHit">Порождён снарядом, который передаёт ему урон атаки (m_projectilesInheritHitData).</param>
         private static void Visit(GameObject go, bool isDirectProjectile, bool inheritsHit, int depth, List<EffectOverride> result, HashSet<GameObject> seen)
         {
             if (!go || depth > 3 || !seen.Add(go)) return;
             var aoe = go.GetComponentInChildren<Aoe>(true);
             if (aoe)
             {
-                // С уроном атаки (m_useAttackSettings и переданный hitData) собственный урон AoE не используется.
                 bool usesAttackHit = aoe.m_useAttackSettings && (isDirectProjectile || inheritsHit);
                 if (!usesAttackHit || aoe.m_damage.GetTotalDamage() > 0f)
                 {
@@ -234,7 +220,6 @@ namespace ValheimArena.Profiles
             var proj = go.GetComponentInChildren<Projectile>(true);
             if (proj)
             {
-                // m_onlySpawnedProjectilesDealDamage: игра обнуляет урон самого снаряда — бьют только порождённые.
                 if (!isDirectProjectile && !proj.m_onlySpawnedProjectilesDealDamage && proj.m_damage.GetTotalDamage() > 0f)
                 {
                     result.Add(new EffectOverride
@@ -251,7 +236,6 @@ namespace ValheimArena.Profiles
                     foreach (var r in proj.m_randomSpawnOnHit)
                         Visit(r, false, pass, depth + 1, result, seen);
             }
-            // Способность призыва (боссы, посохи) создаёт свой AoE без урона атаки.
             var ability = go.GetComponentInChildren<SpawnAbility>(true);
             if (ability) Visit(ability.m_aoePrefab, false, false, depth + 1, result, seen);
         }
@@ -263,9 +247,6 @@ namespace ValheimArena.Profiles
             catch { return token; }
         }
 
-        // ------------------------------------------------------------------ применение к бойцу
-
-        /// <summary>Параметры самого существа (без атак). Здоровье пересчитывается с сохранением доли.</summary>
         public static void ApplyBase(ArenaUnit unit, CreatureProfile p, bool keepHealthFraction)
         {
             var ch = unit.Character;
@@ -274,7 +255,6 @@ namespace ValheimArena.Profiles
             if (p.health > 0f) ch.m_health = p.health;
             unit.transform.localScale = unit.BaseScale * Mathf.Max(0.05f, p.scale);
             if (p.resists != null) ch.m_damageModifiers = p.resists.ToModifiers();
-            // Слабые места — компоненты экземпляра: правка касается только этого бойца.
             if (ch.m_weakSpots != null && p.weakSpots != null && p.weakSpots.Count > 0)
             {
                 var keys = WeakSpotKeys(ch.m_weakSpots);
@@ -283,7 +263,6 @@ namespace ValheimArena.Profiles
                 {
                     string key = keys[i++];
                     if (!ws) continue;
-                    // Профили, снятые до номеров у одноимённых мест, правят все места с этим именем.
                     var o = p.weakSpots.Find(x => x.name == key) ?? p.weakSpots.Find(x => x.name == ws.gameObject.name);
                     if (o != null) ws.m_damageModifiers = o.resists.ToModifiers();
                 }
@@ -338,12 +317,6 @@ namespace ValheimArena.Profiles
             if (keepHealthFraction) RecalculateHealth(unit);
         }
 
-        /// <summary>
-        /// Максимум HP по профилю и уровню (как Character.SetupMaxHealth) с сохранением доли. Свой максимум
-        /// пишется в ZDO: при повторном создании существа у владельца Character.Awake заново считает максимум по
-        /// ванильному m_health (если HP полное), и доля «HP / максимум» у бойца со слабым профилем оказалась бы
-        /// меньше единицы — он терял бы здоровье. Долю берём и по своему максимуму, и по игровому — большую.
-        /// </summary>
         public static void RecalculateHealth(ArenaUnit unit)
         {
             var ch = unit.Character;
@@ -359,7 +332,6 @@ namespace ValheimArena.Profiles
             zdo.Set(ArenaUnit.ZMaxHealth, max);
         }
 
-        /// <summary>Атаки: собственная копия SharedData на каждый предмет бойца, затем запись значений профиля.</summary>
         public static void ApplyItems(ArenaUnit unit, CreatureProfile p)
         {
             if (!(unit.Character is Humanoid h)) return;
@@ -416,7 +388,6 @@ namespace ValheimArena.Profiles
             }
         }
 
-        /// <summary>Вернуть всем предметам бойца общие ванильные SharedData.</summary>
         public static void RestoreAllItems(ArenaUnit unit)
         {
             foreach (var kv in new List<KeyValuePair<ItemDrop.ItemData, ItemDrop.ItemData.SharedData>>(unit.OriginalShared))

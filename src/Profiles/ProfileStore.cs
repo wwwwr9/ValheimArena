@@ -6,14 +6,10 @@ using ValheimArena.Core;
 
 namespace ValheimArena.Profiles
 {
-    /// <summary>Профили существ на диске: BepInEx\config\ValheimArena\profiles\&lt;префаб&gt;\&lt;имя&gt;.json</summary>
     public static class ProfileStore
     {
-        // Ключ — как имя файла: регистр в именах файлов Windows не различает, «Troll/Fast» и «troll/fast» — один профиль.
         private static readonly Dictionary<string, CreatureProfile> Cache = new Dictionary<string, CreatureProfile>(StringComparer.OrdinalIgnoreCase);
 
-        // Списки файлов — для окон, которые рисуются несколько раз за кадр: с диска не чаще раза в 2 с
-        // и не посреди кадра (раскладка и отрисовка одного кадра видят один и тот же список).
         private static readonly Dictionary<string, List<string>> ListCache = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         private static List<string> _withProfiles;
         private static readonly ListTimer Lists = new ListTimer();
@@ -24,7 +20,6 @@ namespace ValheimArena.Profiles
         private static string FilePath(string prefab, string name) => Path.Combine(Dir(prefab), FileNames.Sanitize(name) + ".json");
         private static string Key(string prefab, string name) => FileNames.Sanitize(prefab) + "/" + FileNames.Sanitize(name);
 
-        /// <summary>Имена профилей существа (список только для чтения).</summary>
         public static List<string> List(string prefab)
         {
             if (string.IsNullOrEmpty(prefab)) return new List<string>();
@@ -40,7 +35,6 @@ namespace ValheimArena.Profiles
             return list;
         }
 
-        /// <summary>Префабы, для которых есть хотя бы один профиль (список только для чтения).</summary>
         public static List<string> PrefabsWithProfiles()
         {
             if (Lists.Expired()) { ListCache.Clear(); _withProfiles = null; }
@@ -114,11 +108,6 @@ namespace ValheimArena.Profiles
             catch { return null; }
         }
 
-        /// <summary>
-        /// Чего нет в тексте — как в игре. Профили, записанные до перехода на Newtonsoft.Json (JsonUtility терял
-        /// вложенные классы), приходят без сопротивлений и атак: «все обычные» сняли бы с существа ванильные
-        /// иммунитеты, поэтому сопротивления берутся с прототипа, а списки — пустые (атаки остаются ванильными).
-        /// </summary>
         private static CreatureProfile Normalize(CreatureProfile p, string prefab)
         {
             if (p == null) return null;

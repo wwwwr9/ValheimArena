@@ -3,10 +3,6 @@ using ValheimArena.UI;
 
 namespace ValheimArena.Patches
 {
-    /// <summary>
-    /// Пока в поле ввода мода набирается текст, кнопки игры молчат: буква «m» в поиске
-    /// не открывает карту, «Tab» — инвентарь и т.п.
-    /// </summary>
     [HarmonyPatch(typeof(ZInput), "TryGetButtonState")]
     internal static class ButtonStatePatch
     {
@@ -18,10 +14,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>
-    /// Esc в поле ввода мода только снимает фокус: меню паузы игра открывает по низкоуровневому
-    /// ZInput.GetKeyDown(Escape) (Menu.Update), мимо кнопок игры.
-    /// </summary>
     [HarmonyPatch(typeof(ZInput), nameof(ZInput.GetKeyDown), new[] { typeof(UnityEngine.KeyCode), typeof(bool) })]
     internal static class EscapeKeyPatch
     {
@@ -33,7 +25,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>Колесо над окном мода прокручивает окно, а не камеру игры.</summary>
     [HarmonyPatch(typeof(ZInput), "Internal_GetMouseScrollWheel")]
     internal static class ScrollWheelPatch
     {

@@ -3,29 +3,20 @@ using UnityEngine;
 
 namespace ValheimArena.Core
 {
-    /// <summary>Как игра сама выпускает существо: биомы, размер стаи, уровни, время суток, набеги, логова, алтари.</summary>
     public class VanillaSpawn
     {
         public Heightmap.Biome Biomes;
         public int GroupMin = int.MaxValue, GroupMax;
         public int LevelMin = int.MaxValue, LevelMax;
         public bool Day, Night;
-        /// <summary>Приходит в набегах (RandEventSystem).</summary>
         public bool Event;
-        /// <summary>Выходит из логова (SpawnArea: гнёзда, курганы).</summary>
         public bool Nest;
-        /// <summary>Вызывается на алтаре (OfferingBowl).</summary>
         public bool Altar;
 
         public bool HasGroup => GroupMax > 0;
         public bool HasLevels => LevelMax > 0;
     }
 
-    /// <summary>
-    /// Сбор ванильных данных появления из загруженного мира: списки биомов (SpawnSystemList), набеги
-    /// (RandEventSystem), логова (SpawnArea), алтари (OfferingBowl). Места локаций (CreatureSpawner) загружаются
-    /// вместе с локацией — их здесь может не оказаться.
-    /// </summary>
     public static class VanillaSpawns
     {
         public static Dictionary<string, VanillaSpawn> Collect()
@@ -88,7 +79,6 @@ namespace ValheimArena.Core
             return string.Join(", ", parts);
         }
 
-        /// <summary>Строка «В игре: …» для редактора группы.</summary>
         public static string Describe(VanillaSpawn v)
         {
             if (v == null) return L.T("В списках появления биомов нет: появляется в особых местах или от других существ.");
@@ -104,7 +94,6 @@ namespace ValheimArena.Core
             return L.T("В игре: ") + string.Join("; ", parts) + ".";
         }
 
-        /// <summary>Группа «как в игре»: размер стаи и звёзды из ванильных данных; боссы с алтаря — по одному.</summary>
         public static void ApplyTo(SpawnGroup g, VanillaSpawn v)
         {
             if (v == null) return;

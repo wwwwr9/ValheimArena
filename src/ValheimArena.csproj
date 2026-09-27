@@ -12,14 +12,11 @@
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     <Deterministic>true</Deterministic>
     <DebugType>portable</DebugType>
-    <!-- В сборке путь к исходникам и .pdb — условный (/_/), а не путь на машине, где собирали. -->
     <PathMap>$(MSBuildProjectDirectory)=/_/</PathMap>
-    <!-- Путь к игре можно переопределить: dotnet build -p:ValheimDir="D:\Games\Valheim" -->
     <ValheimDir Condition="'$(ValheimDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Valheim</ValheimDir>
     <ManagedDir>$(ValheimDir)\valheim_Data\Managed</ManagedDir>
     <BepInExCore>$(ValheimDir)\BepInEx\core</BepInExCore>
     <NoWarn>$(NoWarn);CS0649;CS0169;CS8632</NoWarn>
-    <!-- Игровые сборки ссылаются на иные версии фасадов System.*; на работу в Mono это не влияет. -->
     <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3277</MSBuildWarningsAsMessages>
   </PropertyGroup>
 

@@ -3,12 +3,6 @@ using UnityEngine;
 
 namespace ValheimArena.Core
 {
-    /// <summary>
-    /// Присутствие персонажей в мире: видимость, столкновения, реакция существ, команда, неуязвимость.
-    /// Свои настройки игрок пишет в ZDO своего персонажа (он им владеет) — так их видят все клиенты с модом:
-    /// чужие клиенты прячут невидимого игрока у себя, их существа не замечают его, считают его команду.
-    /// Неуязвимость проверяется на клиенте самого игрока (урон по персонажу обрабатывает его владелец).
-    /// </summary>
     public static class PlayerPresence
     {
         private static readonly int ZReact = "va_p_react".GetStableHashCode();
@@ -32,11 +26,8 @@ namespace ValheimArena.Core
 
         public static bool Invulnerable => ArenaSettingsStore.Current.playerInvulnerable;
 
-        // ------------------------------------------------------------------ чтение чужих и своих настроек
-
         private static readonly Dictionary<Player, ZNetView> Views = new Dictionary<Player, ZNetView>();
 
-        /// <summary>ZDO персонажа (ZNetView кэшируется: вызывается из BaseAI.IsEnemy, это горячий путь).</summary>
         private static ZDO Zdo(Player p)
         {
             if (!p) return null;
@@ -48,7 +39,6 @@ namespace ValheimArena.Core
             return nv && nv.IsValid() ? nv.GetZDO() : null;
         }
 
-        /// <summary>Реагируют ли существа на этого игрока (любого, не только своего).</summary>
         public static bool Reacts(Player p)
         {
             if (p == Player.m_localPlayer) return ArenaSettingsStore.Current.creaturesReact;
@@ -56,7 +46,6 @@ namespace ValheimArena.Core
             return z == null || z.GetBool(ZReact, true);
         }
 
-        /// <summary>Команда игрока на арене (0 — вне команд).</summary>
         public static int TeamOf(Player p)
         {
             if (p == Player.m_localPlayer) return ArenaSettingsStore.Current.playerTeam;
@@ -78,17 +67,10 @@ namespace ValheimArena.Core
             return z == null ? CollisionMode.Normal : (CollisionMode)z.GetInt(ZCollision, 0);
         }
 
-        /// <summary>
-        /// Существа не могут задеть игрока: он «сквозь существ» (или без столкновений), либо существа на него
-        /// не реагируют — тогда и их площадные удары и шальные снаряды его не трогают.
-        /// </summary>
         public static bool Untouchable(Player p) => p && (CollisionOf(p) != CollisionMode.Normal || !Reacts(p));
 
-        /// <summary>Удар существа (не игрока) по игроку, которого существа задеть не могут.</summary>
         public static bool CreatureCannotHit(Player p, Character attacker) =>
             (object)attacker != null && attacker && !attacker.IsPlayer() && Untouchable(p);
-
-        // ------------------------------------------------------------------ такт
 
         public static void Update()
         {
@@ -98,7 +80,6 @@ namespace ValheimArena.Core
             {
                 _tick = 0.5f;
                 PublishLocal();
-                // Ушедшие игроки.
                 var gone = new List<Player>();
                 foreach (var kv in State)
                     if (!kv.Key) gone.Add(kv.Key);
@@ -122,7 +103,6 @@ namespace ValheimArena.Core
             }
         }
 
-        /// <summary>Свои настройки — в ZDO своего персонажа (пишем только изменения).</summary>
         private static void PublishLocal()
         {
             var z = Zdo(Player.m_localPlayer);
@@ -134,12 +114,6 @@ namespace ValheimArena.Core
             if (z.GetInt(ZCollision, 0) != s.playerCollision) z.Set(ZCollision, s.playerCollision);
         }
 
-        // ------------------------------------------------------------------ видимость
-
-        /// <summary>
-        /// Прячем через Renderer.forceRenderingOff, а не enabled: игра сама включает/выключает рендеры снаряжения
-        /// (волосы под шлемом, оружие в руке и за спиной) — после показа их состояние остаётся её, а не нашим.
-        /// </summary>
         private static void ApplyVisibility(Player p, Applied a, bool visible, bool periodic)
         {
             if (visible)
@@ -153,7 +127,6 @@ namespace ValheimArena.Core
                 }
                 return;
             }
-            // Снаряжение пересоздаёт свои рендеры — прячем новые раз в полсекунды.
             if (a.Visible || periodic)
             {
                 foreach (var r in p.GetComponentsInChildren<Renderer>(true))
@@ -167,8 +140,6 @@ namespace ValheimArena.Core
             }
         }
 
-        // ------------------------------------------------------------------ столкновения
-
         private static void ApplyCollision(Player p, Applied a, CollisionMode mode, bool periodic, bool local)
         {
             var col = Reflect.Collider(p);
@@ -177,7 +148,6 @@ namespace ValheimArena.Core
 
             if (mode != a.Collision)
             {
-                // Снять предыдущий режим.
                 if (a.Collision == CollisionMode.ThroughCreatures)
                 {
                     foreach (var c in a.Ignored)
@@ -190,7 +160,6 @@ namespace ValheimArena.Core
                     if (local) body.constraints = a.SavedConstraints;
                 }
 
-                // Включить новый. Чужой персонаж у нас не симулируется — ему достаточно выключить коллайдер.
                 if (mode == CollisionMode.Disabled)
                 {
                     a.SavedColliderEnabled = col.enabled;
@@ -208,14 +177,11 @@ namespace ValheimArena.Core
 
             if (mode == CollisionMode.Disabled && periodic && col.enabled)
             {
-                // Посадка на стул/корабль, смерть и т.п. могли вернуть коллайдер — выключаем снова.
                 col.enabled = false;
             }
 
             if (mode == CollisionMode.ThroughCreatures && periodic)
             {
-                // Игра сбрасывает IgnoreCollision, когда коллайдер выключают и включают (смерть, сон, посадка),
-                // поэтому пары обновляются целиком, а не только для новых существ.
                 Vector3 pp = p.transform.position;
                 foreach (var ch in Character.GetAllCharacters())
                 {
@@ -224,7 +190,6 @@ namespace ValheimArena.Core
                     ch.GetComponentsInChildren(false, ColliderBuffer);
                     foreach (var c in ColliderBuffer)
                     {
-                        // Выключенные коллайдеры (надетое оружие существ) Unity в IgnoreCollision не принимает — пишет ошибку.
                         if (!c || c.isTrigger || !c.enabled) continue;
                         Physics.IgnoreCollision(col, c, true);
                         a.Ignored.Add(c);

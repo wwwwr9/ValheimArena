@@ -4,7 +4,6 @@ using ValheimArena.UI;
 
 namespace ValheimArena.Patches
 {
-    /// <summary>Свободная камера и слежение подменяют кадр GameCamera целиком.</summary>
     [HarmonyPatch(typeof(GameCamera), "LateUpdate")]
     internal static class GameCameraLateUpdatePatch
     {
@@ -16,10 +15,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>
-    /// Для игры наша камера — «свободный полёт»: персонаж перестаёт слушать ввод, хотбар скрыт,
-    /// трава и детали освещения считаются от камеры, а не от игрока.
-    /// </summary>
     [HarmonyPatch(typeof(GameCamera), nameof(GameCamera.InFreeFly))]
     internal static class InFreeFlyPatch
     {
@@ -29,7 +24,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>Пока открыто окно мода — курсор свободен.</summary>
     [HarmonyPatch(typeof(GameCamera), nameof(GameCamera.UpdateMouseCapture))]
     internal static class MouseCapturePatch
     {
@@ -41,7 +35,6 @@ namespace ValheimArena.Patches
         }
     }
 
-    /// <summary>Пока открыто окно мода — персонаж не бегает и не бьёт от кликов по окну.</summary>
     [HarmonyPatch(typeof(PlayerController), "TakeInput")]
     internal static class PlayerControllerTakeInputPatch
     {

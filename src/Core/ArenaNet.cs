@@ -4,21 +4,8 @@ using UnityEngine;
 
 namespace ValheimArena.Core
 {
-    /// <summary>
-    /// Сетевой обмен арены через ZRoutedRpc игры. Сервер пересылает маршрутизируемые вызовы всем пирам, даже если
-    /// на нём самом мода нет (обработчик не нужен для пересылки), поэтому выделенному серверу мод не требуется.
-    ///
-    ///   VA_State  хозяин → все   состояние и правила арены (при изменении и раз в 3 с)
-    ///   VA_Hello  новичок → все  «пришлите состояние» — хозяева отвечают VA_State/VA_Stats
-    ///   VA_Cmd    гость → хозяин старт/пауза/продолжить/очистить
-    ///   VA_Clear  хозяин → все   убрать бойцов арены, которыми владеешь
-    ///   VA_Dmg    владелец пострадавшего → хозяин   нанесённый/полученный урон за секунду
-    ///   VA_Kill   владелец погибшего → все          гибель бойца (лента, итоги)
-    ///   VA_Stats  хозяин → все   статистика для итогов у гостей: вся или изменившиеся строки
-    /// </summary>
     public static class ArenaNet
     {
-        /// <summary>Версия протокола: клиенты с другой версией состояние чужой арены не принимают.</summary>
         public const int Protocol = 7;
 
         private const string RState = "VA_State";
@@ -62,7 +49,6 @@ namespace ValheimArena.Core
                 _registered = rpc;
                 _helloSent = false;
             }
-            // Как только появился свой персонаж (подключение завершено) — спросить о действующих аренах.
             if (!_helloSent && Player.m_localPlayer)
             {
                 _helloSent = true;
@@ -93,8 +79,6 @@ namespace ValheimArena.Core
                 return null;
             }
         }
-
-        // ------------------------------------------------------------------ отправка
 
         public static void SendState(ArenaSession s) => Send(ZRoutedRpc.Everybody, RState, Json(s.ToState()));
 
@@ -128,11 +112,6 @@ namespace ValheimArena.Core
 
         public static void SendKill(KillEvent e) => Send(ZRoutedRpc.Everybody, RKill, Json(e));
 
-        /// <summary>
-        /// Статистика гостям: вся (<paramref name="full"/>) или строки, изменившиеся с прошлой рассылки. Строки без
-        /// подписи (урон по бойцу, которого хозяин ещё не видел, или запоздавший после очистки) не отправляются:
-        /// подпись появится — строка изменится и уйдёт целиком.
-        /// </summary>
         public static void SendStats(ArenaSession s, bool full)
         {
             var sum = new StatsSummary { session = s.Id, full = full };
@@ -152,15 +131,12 @@ namespace ValheimArena.Core
             Send(ZRoutedRpc.Everybody, RStats, Json(sum));
         }
 
-        // ------------------------------------------------------------------ приём
-
         private static void OnState(long sender, ZPackage pkg)
         {
             var st = ReadJson<SessionState>(pkg);
             if (st == null) return;
             if (st.protocol != Protocol)
             {
-                // Бойцов такой арены этот клиент не понимает, но и не удаляет как бойцов исчезнувшей арены.
                 Arena.NoteForeignSession(st.id);
                 if (!_warnedProtocol)
                 {

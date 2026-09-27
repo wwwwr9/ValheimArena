@@ -9,23 +9,17 @@ namespace ValheimArena.Core
     {
         public string Prefab;
         public string Display;
-        /// <summary>Босс по признаку игры (Character.IsBoss → m_boss).</summary>
         public bool Boss;
-        /// <summary>Летает всегда (m_flying): появляется в воздухе.</summary>
         public bool Flying;
-        /// <summary>Умеет летать: всегда или взлетает и садится сам (MonsterAI.m_randomFly).</summary>
         public bool CanFly;
-        /// <summary>Не выходит на сушу (MonsterAI.m_avoidLand): появляется на воде.</summary>
         public bool Swimmer;
         public Character.Faction Faction;
-        /// <summary>Как игра выпускает его сама (null — нет в списках появления).</summary>
         public VanillaSpawn Spawn;
         public float Health;
         public GameObject GameObject;
         public string SearchKey;
     }
 
-    /// <summary>Все существа игры (и модов), которых можно выпустить на арену: префабы ZNetScene с Character и ИИ.</summary>
     public static partial class CreatureCatalog
     {
         private static readonly List<CreatureEntry> Entries = new List<CreatureEntry>();
@@ -106,10 +100,8 @@ namespace ValheimArena.Core
             CatalogBuilt(Entries);
         }
 
-        /// <summary>Точка расширения для локальных инструментов; без реализации вызов удаляется компилятором.</summary>
         static partial void CatalogBuilt(List<CreatureEntry> entries);
 
-        /// <summary>Фракции, которые есть в каталоге, по порядку перечисления игры.</summary>
         public static IReadOnlyList<Character.Faction> PresentFactions
         {
             get { EnsureBuilt(); return Factions; }

@@ -8,12 +8,6 @@ using UnityEngine;
 
 namespace ValheimArena.Core
 {
-    /// <summary>
-    /// JSON мода — Newtonsoft.Json из поставки игры. JsonUtility здесь не годится: вложенные классы из сборки
-    /// плагина (состав, атаки и сопротивления профиля, правила в состоянии арены) он молча пропускает и при записи,
-    /// и при чтении. Правила те же, что у JsonUtility: только поля (открытые и [SerializeField]), без свойств;
-    /// поле, которого нет в тексте, и null в тексте оставляют значение по умолчанию.
-    /// </summary>
     internal static class JsonIO
     {
         private sealed class FieldsOnly : DefaultContractResolver

@@ -5,10 +5,6 @@ using UnityEngine;
 
 namespace ValheimArena.UI
 {
-    /// <summary>
-    /// Стили и элементы окон мода. IMGUI используется только для рисования и раскладки; нажатия, перетаскивание,
-    /// колесо и набор текста идут через <see cref="UiInput"/> (события мыши IMGUI в Valheim не приходят).
-    /// </summary>
     public static class GuiKit
     {
         public static GUIStyle Window, WindowTitle, Header, SubHeader, Label, Small, Muted, Button, ButtonOn, Toolbar, ToolbarOn,
@@ -123,11 +119,8 @@ namespace ValheimArena.UI
         public static string Hex(Color c) => ColorUtility.ToHtmlStringRGB(c);
         public static string Colored(string text, Color c) => "<color=#" + Hex(c) + ">" + text + "</color>";
 
-        // ------------------------------------------------------------------ окно
-
         public const float TitleHeight = 26f;
 
-        /// <summary>Окно без GUI.Window: фон, заголовок и область раскладки. Перетаскивание — в ArenaUI.</summary>
         public static void DrawWindow(int index, Rect rect, string title, Action body)
         {
             UiInput.CurrentWindow = index;
@@ -142,11 +135,8 @@ namespace ValheimArena.UI
             UiInput.CurrentWindow = 0;
         }
 
-        // ------------------------------------------------------------------ кнопки
-
         public static bool Press(string text, GUIStyle style, params GUILayoutOption[] opts) => Press(text, style, text, opts);
 
-        /// <summary>Кнопка с явным ключом — для подписей, которые меняются сами (счётчик, состояние боя).</summary>
         public static bool Press(string text, GUIStyle style, string key, params GUILayoutOption[] opts)
         {
             var content = new GUIContent(text);
@@ -161,8 +151,6 @@ namespace ValheimArena.UI
         public static bool Btn(string text, params GUILayoutOption[] opts) => Press(text, Button, opts);
 
         public static bool BtnOn(string text, bool on, params GUILayoutOption[] opts) => Press(text, on ? ButtonOn : Button, opts);
-
-        // ------------------------------------------------------------------ флажки
 
         private static void DrawCheck(Rect box, bool value, bool hover)
         {
@@ -194,7 +182,6 @@ namespace ValheimArena.UI
             return fired ? !value : value;
         }
 
-        /// <summary>Флажок без подписи фиксированной ширины (матрицы); ключ — клетка матрицы или строка списка.</summary>
         public static bool ToggleBox(bool value, float width, string key = "□")
         {
             Rect r = GUILayoutUtility.GetRect(width, 18f, GUILayout.Width(width), GUILayout.Height(18f));
@@ -213,7 +200,6 @@ namespace ValheimArena.UI
             return value;
         }
 
-        /// <summary>Циклический выбор с кнопками ◀ ▶.</summary>
         public static int Cycle(string label, int value, IList<string> names, float labelWidth = 170f, float valueWidth = 220f)
         {
             int n = names.Count;
@@ -227,8 +213,6 @@ namespace ValheimArena.UI
             GUILayout.EndHorizontal();
             return value;
         }
-
-        // ------------------------------------------------------------------ ползунок и числа
 
         public static float SliderBar(float value, float min, float max, string key)
         {
@@ -273,7 +257,6 @@ namespace ValheimArena.UI
             return value;
         }
 
-        /// <summary>Поле числа с буфером, чтобы можно было набирать «1.» и «-».</summary>
         public static float NumberBox(float value, string id, string fmt, float width)
         {
             string shown = value.ToString(fmt, Inv);
@@ -285,7 +268,6 @@ namespace ValheimArena.UI
                 if (nb != buf)
                 {
                     Buffers[id] = nb;
-                    // «NaN», «Infinity» и 1e99 разбираются как числа — в параметры существа они не попадают.
                     if (float.TryParse(nb.Replace(',', '.'), NumberStyles.Float, Inv, out var parsed) && !float.IsNaN(parsed) && !float.IsInfinity(parsed))
                         value = parsed;
                 }
@@ -308,9 +290,6 @@ namespace ValheimArena.UI
             return Mathf.Clamp(value, min, max);
         }
 
-        // ------------------------------------------------------------------ текст
-
-        /// <summary>Однострочное поле ввода: щелчок — фокус, Enter/Esc/Tab — снять фокус, Ctrl+V — вставка, Ctrl+Backspace/Delete — очистить.</summary>
         public static string TextBox(string id, string value, params GUILayoutOption[] opts)
         {
             value = value ?? "";
@@ -336,13 +315,9 @@ namespace ValheimArena.UI
             return value;
         }
 
-        // ------------------------------------------------------------------ прокрутка
-
         public static Vector2 BeginScroll(Vector2 pos, params GUILayoutOption[] opts) => UiInput.BeginScroll(pos, opts);
 
         public static void EndScroll() => UiInput.EndScroll();
-
-        // ------------------------------------------------------------------ рисование
 
         public static void Bar(Rect r, float frac, Color fill, Color back)
         {

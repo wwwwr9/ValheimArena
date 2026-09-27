@@ -2,7 +2,6 @@ using UnityEngine;
 
 namespace ValheimArena.Core
 {
-    /// <summary>Видимая граница арены (кольцо по рельефу + столбы) и удержание бойцов внутри.</summary>
     public static class ArenaBoundary
     {
         private const int Segments = 160;
@@ -41,7 +40,6 @@ namespace ValheimArena.Core
             EnsureObjects();
             _root.SetActive(true);
 
-            // Рельеф под кольцом подгружается постепенно — перестраиваем изредка и при изменении параметров.
             var r = session.Rules;
             _rebuildTimer -= Time.unscaledDeltaTime;
             bool changed = _builtCenter != session.Center || !Mathf.Approximately(_builtRadius, r.radius) || _builtShape != r.shape;
@@ -122,7 +120,6 @@ namespace ValheimArena.Core
             }
         }
 
-        /// <summary>Вернуть персонажа внутрь границы (и под потолок для летающих).</summary>
         public static void Enforce(Character ch, ArenaSession s, BoundaryMode mode)
         {
             var r = s.Rules;
@@ -136,7 +133,6 @@ namespace ValheimArena.Core
                 if (mode == BoundaryMode.ReturnToCenter)
                 {
                     Vector3 p = s.RandomPointInside(0.3f);
-                    // Летуна возвращаем на ту же высоту над землёй, а не на землю.
                     float above = ch.IsFlying() ? Mathf.Max(0.5f, pos.y - Arena.GroundHeight(pos)) : 0.5f;
                     p.y = Arena.GroundHeight(p) + above;
                     pos = p;
@@ -161,7 +157,6 @@ namespace ValheimArena.Core
 
             if (r.heightLimit > 0f && ch.IsFlying())
             {
-                // Над водой — от поверхности воды, как крейсерская высота летунов (ArenaFlight.Surface), а не от дна.
                 float ceiling = Mathf.Max(Arena.GroundHeight(pos), ZoneSystem.instance ? ZoneSystem.instance.m_waterLevel : float.MinValue) + r.heightLimit;
                 if (pos.y > ceiling)
                 {

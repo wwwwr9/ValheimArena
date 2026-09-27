@@ -6,11 +6,6 @@ namespace ValheimArena.Core
 {
     public enum CameraMode { Player = 0, Free = 1, Follow = 2 }
 
-    /// <summary>
-    /// Свободная камера и слежение за бойцами. Работает вместо GameCamera.LateUpdate (патч),
-    /// пока режим не «Игрок»; GameCamera.InFreeFly() при этом отвечает true — игра сама
-    /// отключает управление персонажем, хотбар и центрирует травяной покров по камере.
-    /// </summary>
     public static class ArenaCamera
     {
         public static CameraMode Mode { get; private set; } = CameraMode.Player;
@@ -116,9 +111,6 @@ namespace ValheimArena.Core
             Target = null;
         }
 
-        // ------------------------------------------------------------------ кадр
-
-        /// <summary>Вызывается вместо GameCamera.LateUpdate.</summary>
         public static void UpdateCamera(GameCamera gc)
         {
             float dt = Time.unscaledDeltaTime;
@@ -130,7 +122,6 @@ namespace ValheimArena.Core
             if (listener) listener.transform.localPosition = Vector3.zero;
 
             bool typing = ArenaUI.WantsKeyboard || Console.IsVisible() || (Chat.instance && Chat.instance.HasFocus());
-            // При открытом окне мода обзор — только с зажатой ПКМ: иначе камера крутится, пока ведёшь мышь к кнопке.
             bool look = !ArenaUI.WantsCursor || ZInput.GetMouseButton(1);
             Vector2 md = look && !Menu.IsVisible() ? ZInput.GetMouseDelta() * ArenaPlugin.MouseSensitivity.Value : Vector2.zero;
             float invertY = PlayerController.m_invertCameraY ? -1f : 1f;
@@ -172,7 +163,6 @@ namespace ValheimArena.Core
                 UpdateDirector(dt);
                 if (!Target || !Target.Alive)
                 {
-                    // Цели нет — стоим на месте, но даём оглядеться.
                     _yaw += md.x;
                     _pitch = Mathf.Clamp(_pitch - md.y * invertY, -89f, 89f);
                     t.SetPositionAndRotation(_pos, Quaternion.Euler(_pitch, _yaw, 0f));
@@ -226,7 +216,6 @@ namespace ValheimArena.Core
             if (lost && !s.autoSwitchOnDeath && !s.director) return;
             if (!lost && !s.director) return;
 
-            // Режиссёр: предпочтение тем, кто сейчас дерётся и наносит больше урона.
             ArenaUnit best = null;
             float bestScore = float.MinValue;
             foreach (var u in Candidates())
