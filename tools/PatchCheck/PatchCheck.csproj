@@ -10,7 +10,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Mono.Cecil из поставки BepInEx: чтение метаданных без загрузки сборок игры. -->
     <Reference Include="Mono.Cecil"><HintPath>$(ValheimDir)\BepInEx\core\Mono.Cecil.dll</HintPath><Private>true</Private></Reference>
   </ItemGroup>
 

@@ -25,13 +25,8 @@ namespace ValheimArena.Core
         public float Damage;
     }
 
-    /// <summary>
-    /// Одна арена в мире. Своя (IsLocal) — её ведёт этот клиент; чужая — копия состояния, присланного хозяином.
-    /// Геометрия, правила и статистика — здесь; сетевой обмен — в <see cref="ArenaNet"/>, общая логика — в <see cref="Arena"/>.
-    /// </summary>
     public class ArenaSession
     {
-        /// <summary>Сколько секунд без вестей от хозяина арена считается живой.</summary>
         public const float StaleSeconds = 15f;
 
         public string Id = "";
@@ -44,11 +39,8 @@ namespace ValheimArena.Core
         public double CountdownEnd;
         public double FightStart;
         public double FightEnd;
-        /// <summary>Когда бой встал на паузу: на паузе время боя не идёт.</summary>
         public double PauseStart;
-        /// <summary>Итог текстом на языке хозяина (для версий без разобранного итога).</summary>
         public string Result = "";
-        /// <summary>Разобранный итог: каждый клиент пишет его на своём языке (<see cref="ResultText"/>).</summary>
         public ResultInfo Outcome;
         public int Revision;
         public ArenaRules Rules = new ArenaRules();
@@ -58,9 +50,7 @@ namespace ValheimArena.Core
         public readonly List<FeedEntry> Feed = new List<FeedEntry>();
         public readonly Dictionary<int, SideSummary> Sides = new Dictionary<int, SideSummary>();
         public bool StatsDirty;
-        /// <summary>Хозяин: строки, изменившиеся с последней рассылки.</summary>
         public readonly HashSet<string> DirtyStats = new HashSet<string>();
-        /// <summary>Хозяин: следующая рассылка — вся статистика (после очистки или для нового игрока).</summary>
         public bool StatsFull = true;
 
         public bool Live => IsLocal || Time.unscaledTime - LastHeard < StaleSeconds;
@@ -96,7 +86,6 @@ namespace ValheimArena.Core
             }
         }
 
-        /// <summary>Итог боя на языке этого клиента.</summary>
         public string ResultText
         {
             get
@@ -120,8 +109,6 @@ namespace ValheimArena.Core
             }
         }
 
-        // ------------------------------------------------------------------ сеть
-
         public SessionState ToState()
         {
             return new SessionState
@@ -143,7 +130,6 @@ namespace ValheimArena.Core
             };
         }
 
-        /// <summary>Принять состояние от хозяина. Возвращает прежнее состояние боя.</summary>
         public ArenaState Apply(SessionState s)
         {
             var old = State;
@@ -164,8 +150,6 @@ namespace ValheimArena.Core
             LastHeard = Time.unscaledTime;
             return old;
         }
-
-        // ------------------------------------------------------------------ геометрия
 
         public bool IsInside(Vector3 p, float margin = 0f)
         {
@@ -203,7 +187,6 @@ namespace ValheimArena.Core
             return Center + new Vector3(c.x, 0f, c.y);
         }
 
-        /// <summary>Точка периметра по параметру t∈[0,1).</summary>
         public Vector3 PerimeterPoint(float t)
         {
             Vector3 c = Center;
@@ -225,8 +208,6 @@ namespace ValheimArena.Core
             return c + new Vector3(Mathf.Cos(a) * r, 0f, Mathf.Sin(a) * r);
         }
 
-        // ------------------------------------------------------------------ статистика
-
         public UnitStat Stat(string key)
         {
             if (string.IsNullOrEmpty(key)) return null;
@@ -239,17 +220,12 @@ namespace ValheimArena.Core
             return s;
         }
 
-        /// <summary>Хозяин: строка изменилась — уйдёт гостям со следующей рассылкой.</summary>
         public void MarkDirty(string key)
         {
             DirtyStats.Add(key);
             StatsDirty = true;
         }
 
-        /// <summary>
-        /// Гость: статистика от хозяина — вся или только изменившиеся строки. Название стороны — на языке
-        /// этого клиента.
-        /// </summary>
         public void ApplyStats(List<UnitStat> units, bool full)
         {
             if (full) Stats.Clear();
@@ -275,7 +251,6 @@ namespace ValheimArena.Core
             StatsDirty = true;
         }
 
-        /// <summary>Сводка по сторонам из строк статистики (одинаково у хозяина и гостей).</summary>
         public void RebuildSides()
         {
             Sides.Clear();
@@ -299,7 +274,6 @@ namespace ValheimArena.Core
             Feed.Add(new FeedEntry
             {
                 Time = Time.unscaledTime,
-                // Без убийцы (огонь, падение, вода) подпись — на языке этого клиента.
                 Killer = string.IsNullOrEmpty(e.killer) ? L.T("стихия") : e.killer,
                 KillerColor = e.killerColor,
                 Victim = e.victim,

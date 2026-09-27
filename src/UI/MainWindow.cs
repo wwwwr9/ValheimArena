@@ -6,7 +6,6 @@ using ValheimArena.Profiles;
 
 namespace ValheimArena.UI
 {
-    /// <summary>Главное окно: арена, бойцы, столкновения, камера, персонаж, итоги.</summary>
     public static class MainWindow
     {
         private static int _tab;
@@ -15,7 +14,6 @@ namespace ValheimArena.UI
         private static Vector2 _listScroll;
         private static Vector2 _rosterScroll;
 
-        // Редактор новой/изменяемой группы
         private static SpawnGroup _draft = new SpawnGroup();
         private static int _editingIndex = -1;
         private static string _search = "";
@@ -60,7 +58,6 @@ namespace ValheimArena.UI
                                 ArenaPlugin.KeyFaster.Value, ArenaPlugin.KeyTags.Value, ArenaPlugin.KeyOverlay.Value, ArenaPlugin.KeyGameUi.Value), GuiKit.Muted);
         }
 
-        /// <summary>Язык интерфейса: EN / RU / как в игре. Выбор сохраняется в cfg (Interface → Language).</summary>
         private static void LanguageButtons()
         {
             var cur = ArenaPlugin.Language.Value;
@@ -72,9 +69,6 @@ namespace ValheimArena.UI
         private static ArenaSettings _guestView;
         private static string _guestViewKey = "";
 
-        /// <summary>
-        /// Настройки для показа правил: у хозяина — свои (редактируемые), у гостя — копия правил хозяина (только чтение).
-        /// </summary>
         private static ArenaSettings R
         {
             get
@@ -138,8 +132,6 @@ namespace ValheimArena.UI
                     GUILayout.Label(L.T("Хозяин арены не разрешил гостям управлять боем — можно смотреть и участвовать персонажем."), GuiKit.Muted);
             }
         }
-
-        // ================================================================== Арена
 
         private static void TabArena()
         {
@@ -284,7 +276,6 @@ namespace ValheimArena.UI
             }
         }
 
-        /// <summary>Что убирает «Очистить арену»: наборы и по категориям «убрать / оставить».</summary>
         private static void DrawCleanup()
         {
             GUILayout.Label(L.T("Очистка арены"), GuiKit.SubHeader);
@@ -317,8 +308,6 @@ namespace ValheimArena.UI
             return clear;
         }
 
-        // ================================================================== Бойцы
-
         private static void TabFighters()
         {
             bool canSpawn = Arena.CanSpawn(out var spawnWhy);
@@ -327,7 +316,6 @@ namespace ValheimArena.UI
 
             GUILayout.BeginHorizontal();
 
-            // --- каталог
             GUILayout.BeginVertical(GUILayout.Width(300));
             GUILayout.Label(L.T("Существа"), GuiKit.SubHeader);
             _search = GuiKit.TextField(L.T("Поиск"), _search, "catalog_search", 60f);
@@ -359,7 +347,6 @@ namespace ValheimArena.UI
             GuiKit.EndScroll();
             GUILayout.EndVertical();
 
-            // --- группа
             GUILayout.BeginVertical(GuiKit.Box);
             GUILayout.Label(_editingIndex >= 0 ? L.T("Изменение группы #") + (_editingIndex + 1) : L.T("Новая группа"), GuiKit.SubHeader);
             var entry = CreatureCatalog.Get(_draft.prefab);
@@ -392,7 +379,6 @@ namespace ValheimArena.UI
 
             GUILayout.EndHorizontal();
 
-            // --- состав
             GUILayout.Space(6);
             GUILayout.BeginHorizontal();
             GUILayout.Label(L.T("Состав арены"), GuiKit.Header);
@@ -424,7 +410,6 @@ namespace ValheimArena.UI
                 if (GuiKit.Btn(L.T("Выпустить"), GUILayout.Width(84))) Arena.SpawnGroup(i);
                 GUI.enabled = true;
                 if (GuiKit.Btn(L.T("Изм."), GUILayout.Width(44))) { _draft = g.Clone(); _editingIndex = i; }
-                // Изменяемая группа помнится номером — перестановка и удаление сдвигают его вместе с ней.
                 if (GuiKit.Btn("▲", GUILayout.Width(24)) && i > 0)
                 {
                     S.roster[i] = S.roster[i - 1]; S.roster[i - 1] = g;
@@ -449,7 +434,6 @@ namespace ValheimArena.UI
             GuiKit.EndScroll();
         }
 
-        /// <summary>Добавить группу; следующая по умолчанию пойдёт за другую команду — чтобы было кому драться.</summary>
         private static void AddDraft(bool spawnNow)
         {
             S.roster.Add(_draft.Clone());
@@ -457,10 +441,6 @@ namespace ValheimArena.UI
             _draft.team = _draft.team % Hostility.TeamCount + 1;
         }
 
-        /// <summary>
-        /// Группы каталога — по признакам самой игры: босс (m_boss), летает (всегда или взлетает сам), живёт в воде
-        /// (не выходит на сушу или морская фракция); фракция — та, по которой игра решает, кто кому враг.
-        /// </summary>
         private static bool PassCategory(CreatureEntry e)
         {
             if (_filterFaction >= 0 && (int)e.Faction != _filterFaction) return false;
@@ -529,8 +509,6 @@ namespace ValheimArena.UI
             g.behavior = GuiKit.Cycle(L.T("Поведение"), g.behavior + 1, behNames, lw, 160f) - 1;
             g.spread = GuiKit.Slider(L.T("Разброс"), g.spread, 0f, 20f, "spread", "0.#", lw, L.T("м"));
         }
-
-        // ================================================================== Столкновения
 
         private static void TabHostility()
         {
@@ -647,8 +625,6 @@ namespace ValheimArena.UI
             GUI.enabled = true;
         }
 
-        // ================================================================== Камера
-
         private static string[] StyleNames => new[] { L.T("Орбита"), L.T("Погоня"), L.T("Сверху") };
 
         private static void TabCamera()
@@ -706,7 +682,6 @@ namespace ValheimArena.UI
             GUILayout.Label(L.T("Оверлей"), GuiKit.SubHeader);
             S.overlay = GuiKit.Toggle(L.T("Показывать оверлей арены (") + ArenaPlugin.KeyOverlay.Value + ")", S.overlay);
             S.nameTags = GuiKit.Toggle(L.F("Таблички над бойцами: имя, звёзды, здоровье ({0})", ArenaPlugin.KeyTags.Value), S.nameTags);
-            // Состояние интерфейса игры живёт в самой игре (Hud.m_userHidden), поэтому флажок читает и пишет его напрямую.
             bool hideGame = GuiKit.Toggle(L.F("Скрыть интерфейс игры ({0})", ArenaPlugin.KeyGameUi.Value), GameUi.Hidden,
                 L.T("HUD, миникарта, полоски над существами, сообщения игры, чат и подсказки клавиш; оверлей и окна арены остаются."));
             if (hideGame != GameUi.Hidden) GameUi.SetHidden(hideGame);
@@ -714,8 +689,6 @@ namespace ValheimArena.UI
             S.killFeed = GuiKit.Toggle(L.T("Лента убийств"), S.killFeed);
             S.tagDistance = GuiKit.Slider(L.T("Дальность табличек"), S.tagDistance, 20f, 250f, "tagdist", "0", suffix: L.T("м"));
         }
-
-        // ================================================================== Персонаж
 
         private static void TabPlayer()
         {
@@ -741,7 +714,6 @@ namespace ValheimArena.UI
             GUILayout.Space(4);
             S.playerVisible = GuiKit.Toggle(L.T("Видимое отображение"), S.playerVisible);
             GUILayout.BeginHorizontal();
-            // Отдельный ключ: «Столкновения» — это ещё и вкладка вражды («Hostility»), а здесь — физика тела.
             GUILayout.Label(L.T("Столкновения тела"), GuiKit.Label, GUILayout.Width(170));
             for (int m = 0; m < 3; m++)
                 if (GuiKit.BtnOn(PlayerPresence.CollisionName((CollisionMode)m), S.playerCollision == m)) S.playerCollision = m;
@@ -761,8 +733,6 @@ namespace ValheimArena.UI
                 L.T("Никакого урона, ошеломления и отбрасывания — ни от существ, ни от игроков, огня, яда, дыма и падения. ") +
                 L.T("Существа при этом замечают и атакуют как обычно."));
         }
-
-        // ================================================================== Итоги
 
         private static void TabResults()
         {

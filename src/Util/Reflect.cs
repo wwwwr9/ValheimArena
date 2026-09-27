@@ -3,7 +3,6 @@ using UnityEngine;
 
 namespace ValheimArena
 {
-    /// <summary>Доступ к закрытым полям и методам игры.</summary>
     internal static class Reflect
     {
         public static readonly AccessTools.FieldRef<MonsterAI, Character> TargetCreature =
@@ -60,7 +59,6 @@ namespace ValheimArena
         private static readonly System.Reflection.MethodInfo SetPatrolPointMethod =
             AccessTools.Method(typeof(BaseAI), "SetPatrolPoint", new[] { typeof(Vector3) });
 
-        /// <summary>Точка патруля (как у босса у алтаря): вокруг неё существо бродит без цели.</summary>
         public static void SetPatrolPoint(BaseAI ai, Vector3 point)
         {
             try { SetPatrolPointMethod?.Invoke(ai, new object[] { point }); }

@@ -3,11 +3,6 @@ using UnityEngine;
 
 namespace ValheimArena.UI
 {
-    /// <summary>
-    /// Полное скрытие интерфейса игры: HUD, полоски над существами, всплывающий урон, сообщения и чат прячет
-    /// сам флаг игры Hud.m_userHidden (как по Ctrl+F3), миникарту и подсказки клавиш — мод. Оверлей и окна арены
-    /// остаются. Состояние не сохраняется: в новом мире интерфейс снова виден.
-    /// </summary>
     public static class GameUi
     {
         public static bool Hidden { get; private set; }
@@ -29,11 +24,9 @@ namespace ValheimArena.UI
             if (!hidden) RestoreMinimap();
         }
 
-        /// <summary>Каждый кадр: держать скрытыми части, которые игра по своему флагу не прячет.</summary>
         public static void Update()
         {
             if (!Hidden) return;
-            // Игра вернула интерфейс сама (Ctrl+F3, удержание кнопки геймпада, новый мир) — значит, его вернули.
             if (!Hud.instance || !Hud.instance.m_userHidden)
             {
                 Hidden = false;
@@ -57,7 +50,6 @@ namespace ValheimArena.UI
         }
     }
 
-    /// <summary>Подсказки клавиш игра включает заново каждый кадр — при скрытом интерфейсе гасим их сразу после неё.</summary>
     [HarmonyPatch(typeof(KeyHints), "UpdateHints")]
     internal static class KeyHintsHidePatch
     {

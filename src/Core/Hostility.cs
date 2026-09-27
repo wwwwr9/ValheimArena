@@ -3,10 +3,6 @@ using UnityEngine;
 
 namespace ValheimArena.Core
 {
-    /// <summary>
-    /// Кто на кого нападает внутри арены. Подменяет BaseAI.IsEnemy для бойцов арены
-    /// (и для локального игрока, если существа не должны на него реагировать).
-    /// </summary>
     public static class Hostility
     {
         public const int TeamCount = 8;
@@ -14,14 +10,14 @@ namespace ValheimArena.Core
 
         public static readonly Color[] TeamColors =
         {
-            new Color(0.95f, 0.30f, 0.25f), // 1 красные
-            new Color(0.30f, 0.60f, 1.00f), // 2 синие
-            new Color(0.35f, 0.85f, 0.35f), // 3 зелёные
-            new Color(1.00f, 0.80f, 0.20f), // 4 жёлтые
-            new Color(0.75f, 0.40f, 0.95f), // 5 фиолетовые
-            new Color(0.25f, 0.90f, 0.90f), // 6 бирюзовые
-            new Color(1.00f, 0.55f, 0.15f), // 7 оранжевые
-            new Color(0.85f, 0.85f, 0.85f), // 8 белые
+            new Color(0.95f, 0.30f, 0.25f),
+            new Color(0.30f, 0.60f, 1.00f),
+            new Color(0.35f, 0.85f, 0.35f),
+            new Color(1.00f, 0.80f, 0.20f),
+            new Color(0.75f, 0.40f, 0.95f),
+            new Color(0.25f, 0.90f, 0.90f),
+            new Color(1.00f, 0.55f, 0.15f),
+            new Color(0.85f, 0.85f, 0.85f),
         };
 
         public static string[] TeamNames => new[]
@@ -64,10 +60,6 @@ namespace ValheimArena.Core
             }
         }
 
-        /// <summary>
-        /// Копия ванильной таблицы BaseAI.IsEnemy (ветка без приручения и агрессии), чтобы матрица фракций
-        /// по умолчанию совпадала с игрой. Направленная: a — тот, кто ищет цель.
-        /// </summary>
         public static bool VanillaFactionHostile(Character.Faction a, Character.Faction b)
         {
             if (a == b) return false;
@@ -102,10 +94,6 @@ namespace ValheimArena.Core
             }
         }
 
-        /// <summary>
-        /// Полная копия ванильного BaseAI.IsEnemy (сам метод перехвачен патчем): общая группа (m_group) — не враги;
-        /// приручённые и разозлённые — по правилам игры; дальше — таблица фракций.
-        /// </summary>
         public static bool VanillaIsEnemy(Character a, Character b)
         {
             if (a == b || !a || !b) return false;
@@ -140,7 +128,6 @@ namespace ValheimArena.Core
                     s.factionMatrix[i * FactionCount + j] = VanillaFactionHostile((Character.Faction)i, (Character.Faction)j);
         }
 
-        /// <summary>Боссы нападают на всех рядовых (и, по желанию, рядовые отвечают).</summary>
         public static void BossesAttackEveryone(ArenaSettings s, bool reciprocal)
         {
             int boss = (int)Character.Faction.Boss;
@@ -177,10 +164,6 @@ namespace ValheimArena.Core
             return s.factionMatrix[a * FactionCount + b];
         }
 
-        /// <summary>
-        /// Враждебен ли боец a к бойцу b (направленно: a ищет цель). Бойцы одной арены; правила — этой арены,
-        /// у всех клиентов одинаковые (их рассылает хозяин).
-        /// </summary>
         public static bool UnitsHostile(ArenaUnit a, ArenaUnit b)
         {
             if (a == b) return false;
@@ -199,10 +182,6 @@ namespace ValheimArena.Core
             }
         }
 
-        /// <summary>
-        /// Боец и игрок (любой, не только свой): учитываются его настройки из ZDO персонажа — реагируют ли на него
-        /// существа и в какой он команде. Игрок за границей изолированной арены — посторонний.
-        /// </summary>
         public static bool UnitVsPlayer(ArenaUnit u, Player p, bool unitIsSeeker)
         {
             if (PlayerPresence.Untouchable(p)) return false;
@@ -225,20 +204,14 @@ namespace ValheimArena.Core
             }
         }
 
-        /// <summary>Стороны от этого номера — «сам за себя» (режим «Все против всех»).</summary>
         public const int SoloSides = 100000;
 
-        /// <summary>Сторона бойца для подсчёта победителя.</summary>
         public static int SideOf(ArenaUnit u)
         {
             var mode = (HostilityMode)(u.Rules?.hostilityMode ?? 0);
             return SideOf(mode, u.Team, (int)u.Character.GetFaction(), u.Key);
         }
 
-        /// <summary>
-        /// Сторона по данным бойца. «Сам за себя» — по полному ключу ZDO (игрок + номер объекта): номера объектов
-        /// у каждого игрока свои, и одинаковый номер у бойцов разных игроков слил бы их в одну сторону.
-        /// </summary>
         public static int SideOf(HostilityMode mode, int team, int faction, string key)
         {
             switch (mode)
@@ -266,7 +239,6 @@ namespace ValheimArena.Core
 
         public static Color FactionColor(int f) => Color.HSVToRGB((f * 0.137f) % 1f, 0.55f, 1f);
 
-        /// <summary>Цвет бойца в оверлее и ленте: цвет команды или фракции — по режиму его арены.</summary>
         public static Color UnitColor(ArenaUnit u)
         {
             if ((HostilityMode)(u.Rules?.hostilityMode ?? 0) == HostilityMode.Factions)

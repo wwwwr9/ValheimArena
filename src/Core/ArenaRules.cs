@@ -4,10 +4,6 @@ using UnityEngine;
 
 namespace ValheimArena.Core
 {
-    /// <summary>
-    /// Правила арены, общие для всех игроков: их задаёт хозяин арены, остальные клиенты получают копию
-    /// и применяют к бойцам, которыми управляют сами (владение существом в Valheim переходит между игроками).
-    /// </summary>
     [Serializable]
     public class ArenaRules
     {
@@ -33,10 +29,8 @@ namespace ValheimArena.Core
         public bool dropLoot;
         public bool freezeBeforeStart = true;
         public bool freezeAfterFinish;
-        /// <summary>Отсчёт перед боем, с (ведёт хозяин; гостю — для показа правил).</summary>
         public float countdown = 3f;
 
-        /// <summary>Гости могут начинать/останавливать бой, очищать арену и выпускать своих бойцов.</summary>
         public bool allowGuests = true;
 
         public static ArenaRules From(ArenaSettings s)
@@ -68,7 +62,6 @@ namespace ValheimArena.Core
             };
         }
 
-        /// <summary>Записать правила в настройки (для показа правил хозяина в окне гостя).</summary>
         public void CopyTo(ArenaSettings s)
         {
             s.radius = radius;
@@ -111,7 +104,6 @@ namespace ValheimArena.Core
         }
     }
 
-    /// <summary>Состояние сессии арены по сети (хозяин → все).</summary>
     [Serializable]
     public class SessionState
     {
@@ -132,21 +124,17 @@ namespace ValheimArena.Core
         public ArenaRules rules = new ArenaRules();
     }
 
-    /// <summary>Итог боя по частям: текст из них каждый клиент собирает на своём языке.</summary>
     [Serializable]
     public class ResultInfo
     {
         public const int None = 0, Draw = 1, Win = 2;
         public int kind;
-        /// <summary>Стороны-победители (<see cref="Hostility.SideOf(ArenaUnit)"/>).</summary>
         public int[] sides = new int[0];
-        /// <summary>Подпись бойца для стороны «сам за себя», иначе пусто.</summary>
         public string[] solo = new string[0];
         public int alive;
         public float seconds;
     }
 
-    /// <summary>Строка статистики бойца (хозяин собирает, рассылает гостям).</summary>
     [Serializable]
     public class UnitStat
     {
@@ -171,12 +159,10 @@ namespace ValheimArena.Core
     public class StatsSummary
     {
         public string session = "";
-        /// <summary>Вся статистика (иначе — только изменившиеся строки).</summary>
         public bool full = true;
         public List<UnitStat> units = new List<UnitStat>();
     }
 
-    /// <summary>Гибель бойца (владелец погибшего → все).</summary>
     [Serializable]
     public class KillEvent
     {

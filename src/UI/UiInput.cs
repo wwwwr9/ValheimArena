@@ -6,25 +6,11 @@ using UnityEngine.InputSystem;
 
 namespace ValheimArena.UI
 {
-    /// <summary>
-    /// Собственный ввод окон мода. В Valheim на Unity 6 события IMGUI MouseDown/KeyDown до OnGUI не доходят,
-    /// а подмешанные через Event.QueueEvent тоже не срабатывают. Поэтому окна используют IMGUI только для рисования и раскладки,
-    /// а мышь/клавиатуру читают из Input System — так же, как сама игра.
-    ///
-    /// Схема: щелчок, случившийся в кадре N, привязывается к элементу в проходе Repaint кадра N (там известны
-    /// прямоугольники и позиция мыши в координатах окна); срабатывает элемент в первом проходе OnGUI кадра N+1
-    /// (Layout). Срабатывает он посреди раскладки: всё, что разложено выше, осталось по старому состоянию, поэтому
-    /// после такого прохода кадр раскладывается заново (<see cref="InputApplied"/>, ArenaUI.OnGUI).
-    ///
-    /// Элемент опознаётся не порядковым номером, а ключом (<see cref="ControlId"/>): если между кадрами в списке
-    /// выше появилась или пропала строка, номера сдвигаются, и щелчок достался бы соседнему элементу.
-    /// </summary>
     public static class UiInput
     {
         private static readonly PropertyInfo VisibleRectProp =
             typeof(GUI).Assembly.GetType("UnityEngine.GUIClip")?.GetProperty("visibleRect", BindingFlags.Static | BindingFlags.NonPublic);
 
-        // --- состояние из Update
         public static Vector2 MouseScreen { get; private set; }
         public static bool Held { get; private set; }
         private static bool _pressPending;
@@ -33,7 +19,6 @@ namespace ValheimArena.UI
         private static bool _backspace, _delete, _submit, _cancel, _clear, _paste;
         private static Keyboard _hookedKeyboard;
 
-        // --- проходы OnGUI
         private const int NoControl = -1;
         private const int KindClick = 0, KindScroll = 1, KindDrag = 2;
         public const int KindText = 3;
@@ -53,14 +38,9 @@ namespace ValheimArena.UI
 
         private static int FireId { get; set; } = NoControl;
         public static bool FirstPass { get; private set; }
-        /// <summary>
-        /// В первом проходе кадра сработал элемент, применён набор или ползунок: состояние окна поменялось посреди
-        /// раскладки, и кадр нужно разложить заново (<see cref="ArenaUI.OnGUI"/>).
-        /// </summary>
         public static bool InputApplied { get; private set; }
         public static bool IsRepaint { get; private set; }
 
-        // --- текстовый фокус и перетаскивание ползунков
         public static string FocusId { get; private set; }
         private static readonly List<char> FrameTyped = new List<char>();
         private static bool _fBackspace, _fDelete, _fSubmit, _fCancel, _fClear, _fPaste;
@@ -68,13 +48,10 @@ namespace ValheimArena.UI
         private static float _dragFrac;
         private static bool _dragArmed;
 
-        // --- окна
         public static int CurrentWindow;
         public static int TopWindowUnderMouse;
 
         public static bool TextFocused => FocusId != null;
-
-        // ================================================================== Update
 
         public static void Update(bool windowsOpen)
         {
@@ -123,14 +100,10 @@ namespace ValheimArena.UI
         private static void OnTextInput(char c)
         {
             if (FocusId == null || c < 32 || c == 127) return;
-            // Ctrl+буква — сочетание, а не символ. AltGr в Windows приходит как Ctrl+Alt и набирает символы (@, €, {).
             if (_hookedKeyboard != null && _hookedKeyboard.ctrlKey.isPressed && !_hookedKeyboard.altKey.isPressed) return;
             if (TypedPending.Count < 256) TypedPending.Add(c);
         }
 
-        // ================================================================== проходы OnGUI
-
-        /// <summary>В начале OnGUI мода, на каждом событии.</summary>
         public static void BeginPass(Vector2 guiMouse, Rect menu, bool menuOpen, Rect editor, bool editorOpen)
         {
             _scope = 0;
@@ -150,7 +123,6 @@ namespace ValheimArena.UI
                 _armedId = NoControl;
                 if (_pressResolved)
                 {
-                    // Щелчок мимо поля ввода снимает фокус; поле, по которому щёлкнули, вернёт его себе.
                     FocusId = null;
                     _pressResolved = false;
                 }
@@ -172,7 +144,6 @@ namespace ValheimArena.UI
             }
         }
 
-        /// <summary>В конце OnGUI мода.</summary>
         public static void EndPass()
         {
             if (!IsRepaint) return;
@@ -194,10 +165,6 @@ namespace ValheimArena.UI
             }
         }
 
-        /// <summary>
-        /// Опознание элемента: ключ (подпись кнопки, имя поля) в пределах окна и области <see cref="PushScope"/>
-        /// плюс номер среди элементов с тем же ключом в этом проходе. Сдвиг соседних элементов его не меняет.
-        /// </summary>
         public static int ControlId(string key, int kind = KindClick)
         {
             int h = Mix(Mix(Mix(_scope, CurrentWindow), kind), key == null ? 0 : key.GetHashCode());
@@ -209,10 +176,6 @@ namespace ValheimArena.UI
 
         private static int Mix(int h, int v) => unchecked((h ^ v) * 16777619 + 1);
 
-        /// <summary>
-        /// Область ключей для строки списка: одинаковые кнопки разных строк («✕», «Изм.») привязаны к своей строке,
-        /// а не к позиции в списке.
-        /// </summary>
         public static void PushScope(int key)
         {
             ScopeStack.Push(_scope);
@@ -224,7 +187,6 @@ namespace ValheimArena.UI
             if (ScopeStack.Count > 0) _scope = ScopeStack.Pop();
         }
 
-        /// <summary>Мышь над прямоугольником (координаты текущей группы/области) и не скрыта прокруткой или другим окном.</summary>
         public static bool IsHover(Rect r)
         {
             if (!ArenaUI.WantsCursor || CurrentWindow != TopWindowUnderMouse) return false;
@@ -242,10 +204,6 @@ namespace ValheimArena.UI
             return true;
         }
 
-        /// <summary>
-        /// Кликабельный элемент с ключом <paramref name="key"/> (см. <see cref="ControlId"/>): регистрирует попадание
-        /// в Repaint и возвращает true в кадр срабатывания.
-        /// </summary>
         public static bool Clickable(Rect r, string key, out bool hover, int kind = KindClick)
         {
             int id = ControlId(key, kind);
@@ -255,8 +213,6 @@ namespace ValheimArena.UI
             InputApplied = true;
             return true;
         }
-
-        // ------------------------------------------------------------------ прокрутка
 
         public static Vector2 BeginScroll(Vector2 pos, params GUILayoutOption[] options)
         {
@@ -275,13 +231,9 @@ namespace ValheimArena.UI
             GUILayout.EndScrollView();
             int id = ScrollStack.Count > 0 ? ScrollStack.Pop() : NoControl;
             if (!IsRepaint || _scrollCandidate != NoControl || Mathf.Abs(_scrollDelta) < 0.01f) return;
-            // Внутренняя прокрутка закрывается раньше внешней — она и забирает колесо.
             if (IsHover(GUILayoutUtility.GetLastRect())) _scrollCandidate = id;
         }
 
-        // ------------------------------------------------------------------ ползунок
-
-        /// <summary>Доля 0…1 от перетаскивания; null — ползунок не тянут. <paramref name="active"/> — тянут именно этот.</summary>
         public static float? Drag(Rect r, string key, out bool active)
         {
             int id = ControlId(key, KindDrag);
@@ -308,13 +260,10 @@ namespace ValheimArena.UI
             return null;
         }
 
-        // ------------------------------------------------------------------ текст
-
         public static void Focus(string id) => FocusId = id;
 
         public static void Unfocus() => FocusId = null;
 
-        /// <summary>Применить набранное за кадр к строке фокусного поля (только в первом проходе кадра).</summary>
         public static string ApplyTyping(string id, string value, out bool submitted)
         {
             submitted = false;
