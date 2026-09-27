@@ -3,3 +3,5 @@ obj/
 out/
 .vs/
 *.user
+.vscode/
+.idea/
