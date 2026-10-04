@@ -17,11 +17,11 @@ Russian is in [README.ru.md](README.ru.md).
   </tr>
   <tr>
     <td width="50%" align="center"><img src="docs/screenshots/gammeltroll-vs-fader.jpg" alt="A gammeltroll and Fader fighting on a snowy coast"><br><sub>A gammeltroll against Fader</sub></td>
-    <td width="50%" align="center"><img src="docs/screenshots/gammeltrolls-vs-charred.jpg" alt="Three gammeltrolls against an army of charred"><br><sub>Three gammeltrolls against 26 charred warriors and marksmen</sub></td>
+    <td width="50%" align="center"><img src="docs/screenshots/gammeltrolls-vs-charred.jpg" alt="Gammeltrolls against an army of charred"><br><sub>Gammeltrolls against charred warriors and marksmen</sub></td>
   </tr>
   <tr>
-    <td width="50%" align="center"><img src="docs/screenshots/seekers-vs-fulings-overlay.jpg" alt="Sixteen seekers raiding sixteen fulings with the arena overlay shown"><br><sub>16 seekers against 16 fulings with the arena overlay: team score, name plates and health bars</sub></td>
-    <td width="50%" align="center"><img src="docs/screenshots/seekers-vs-fulings.jpg" alt="Sixteen seekers raiding sixteen fulings with the arena overlay hidden"><br><sub>The same moment with the overlay hidden (F10)</sub></td>
+    <td width="50%" align="center"><img src="docs/screenshots/seekers-vs-fulings-overlay.jpg" alt="Seekers raiding fulings with the arena overlay shown"><br><sub>Seekers against fulings with the arena overlay: team score, name plates and health bars</sub></td>
+    <td width="50%" align="center"><img src="docs/screenshots/seekers-vs-fulings.jpg" alt="Seekers raiding fulings with the arena overlay hidden"><br><sub>The same moment with the overlay hidden (F10)</sub></td>
   </tr>
 </table>
 
