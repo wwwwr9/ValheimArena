@@ -17,8 +17,8 @@ Russian is in [README.ru.md](README.ru.md).
     <td width="50%" align="center"><img src="docs/screenshots/gammeltrolls-vs-charred.jpg" alt="Gammeltrolls against an army of charred"><br><sub>Gammeltrolls against charred warriors and marksmen</sub></td>
   </tr>
   <tr>
-    <td width="50%" align="center"><img src="docs/screenshots/seekers-vs-fulings-overlay.jpg" alt="Seekers raiding fulings with the arena overlay shown"><br><sub>Seekers against fulings with the arena overlay: team score, name plates and health bars</sub></td>
-    <td width="50%" align="center"><img src="docs/screenshots/seekers-vs-fulings.jpg" alt="Seekers raiding fulings with the arena overlay hidden"><br><sub>The same moment with the overlay hidden (F10)</sub></td>
+    <td width="50%" align="center"><img src="docs/screenshots/troll-vs-eikthyr.jpg" alt="A troll and Eikthyr fighting in a foggy meadow"><br><sub>A troll against Eikthyr</sub></td>
+    <td width="50%" align="center"><img src="docs/screenshots/seekers-vs-fulings.jpg" alt="Seekers raiding fulings"><br><sub>Seekers against fulings</sub></td>
   </tr>
 </table>
 

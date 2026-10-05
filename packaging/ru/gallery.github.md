@@ -7,7 +7,7 @@
     <td width="50%" align="center"><img src="docs/screenshots/gammeltrolls-vs-charred.jpg" alt="Гаммельтролли против армии обугленных"><br><sub>Гаммельтролли против обугленных воинов и лучников</sub></td>
   </tr>
   <tr>
-    <td width="50%" align="center"><img src="docs/screenshots/seekers-vs-fulings-overlay.jpg" alt="Налёт искателей на фулингов, оверлей арены включён"><br><sub>Искатели против фулингов с оверлеем арены: счёт сторон, таблички и полоски здоровья</sub></td>
-    <td width="50%" align="center"><img src="docs/screenshots/seekers-vs-fulings.jpg" alt="Налёт искателей на фулингов, оверлей арены скрыт"><br><sub>Тот же момент со скрытым оверлеем (F10)</sub></td>
+    <td width="50%" align="center"><img src="docs/screenshots/troll-vs-eikthyr.jpg" alt="Тролль и Эйктюр сражаются на туманном лугу"><br><sub>Тролль против Эйктюра</sub></td>
+    <td width="50%" align="center"><img src="docs/screenshots/seekers-vs-fulings.jpg" alt="Налёт искателей на фулингов"><br><sub>Искатели против фулингов</sub></td>
   </tr>
 </table>
